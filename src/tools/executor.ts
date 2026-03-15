@@ -26,7 +26,8 @@ function buildDiff(filePath: string, before: string, after: string): FileDiff {
 
 export class ToolExecutor {
   private workingDir: string;
-  private sessionFiles: Record<string, string> = {}; // path -> content before edit
+  private sessionFiles: Record<string, string> = {}; // path -> original content before first edit
+  private changeHistory: Array<{ path: string; before: string }> = []; // ordered list for undo
 
   constructor(workingDir: string) {
     this.workingDir = workingDir;
@@ -67,8 +68,8 @@ export class ToolExecutor {
     const abs = this.resolvePath(args.path);
     const before = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
 
-    // Snapshot before edit for diff
     if (!this.sessionFiles[abs]) this.sessionFiles[abs] = before;
+    this.changeHistory.push({ path: abs, before });
 
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, args.content, 'utf8');
@@ -89,6 +90,7 @@ export class ToolExecutor {
     }
 
     if (!this.sessionFiles[abs]) this.sessionFiles[abs] = before;
+    this.changeHistory.push({ path: abs, before });
 
     const after = before.replace(args.old_str, args.new_str);
     fs.writeFileSync(abs, after, 'utf8');
@@ -137,5 +139,12 @@ export class ToolExecutor {
 
   getSessionFiles(): Record<string, string> {
     return this.sessionFiles;
+  }
+
+  undoLastChange(): string | null {
+    const last = this.changeHistory.pop();
+    if (!last) return null;
+    fs.writeFileSync(last.path, last.before, 'utf8');
+    return last.path;
   }
 }

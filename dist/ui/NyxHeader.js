@@ -15,7 +15,7 @@ const PROVIDER_COLORS = {
     openai: 'green',
     groq: 'red',
 };
-export function NyxHeader({ mood, provider, model, workingDir, tokenCount, allowAll, }) {
+export function NyxHeader({ mood, provider, model, workingDir, tokenCount, allowAll, persona, sessionCost, }) {
     const art = NYX_ART[mood];
     const providerConfig = PROVIDERS[provider];
     const shortDir = workingDir.replace(process.env.HOME ?? '', '~');
@@ -36,8 +36,14 @@ export function NyxHeader({ mood, provider, model, workingDir, tokenCount, allow
                 React.createElement(Text, { color: "cyan" }, shortDir)),
             React.createElement(Box, { flexDirection: "row" },
                 React.createElement(Text, { color: "gray", dimColor: true }, "tokens    "),
-                React.createElement(Text, { color: tokenCount > 50000 ? 'red' : 'white' }, tokenCount.toLocaleString()),
-                allowAll && (React.createElement(Text, { color: "yellow", dimColor: true }, "  \u2713 allowall")))),
+                React.createElement(Text, { color: tokenCount > 100000 ? 'red' : tokenCount > 50000 ? 'yellow' : 'white' }, tokenCount.toLocaleString()),
+                persona && React.createElement(Text, { color: "gray", dimColor: true },
+                    "  \u25D0 ",
+                    persona),
+                allowAll && React.createElement(Text, { color: "yellow", dimColor: true }, "  \u2713 allowall"),
+                sessionCost > 0 && React.createElement(Text, { color: "gray", dimColor: true },
+                    "  $",
+                    sessionCost.toFixed(4)))),
         React.createElement(Box, { alignSelf: "center", marginLeft: 1 },
             React.createElement(Text, { color: "gray", dimColor: true },
                 "[",

@@ -1,13 +1,11 @@
-// src/sessions/manager.ts
-
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { SessionState, Checkpoint, Provider, Message } from '../core/types.js';
+import { SessionState, Checkpoint, Provider, Message, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
 import { PROVIDERS } from '../core/types.js';
 
 const SESSION_DIR = path.join(os.homedir(), '.localcode');
-const STATE_FILE = path.join(SESSION_DIR, 'session.json');
+const STATE_FILE  = path.join(SESSION_DIR, 'session.json');
 
 function ensureDir(): void {
   fs.mkdirSync(SESSION_DIR, { recursive: true });
@@ -16,11 +14,10 @@ function ensureDir(): void {
 export function loadSession(): SessionState {
   ensureDir();
 
-  // Auto-detect API keys from env
   const apiKeys: Partial<Record<Provider, string>> = {};
   if (process.env.ANTHROPIC_API_KEY) apiKeys.claude = process.env.ANTHROPIC_API_KEY;
-  if (process.env.OPENAI_API_KEY) apiKeys.openai = process.env.OPENAI_API_KEY;
-  if (process.env.GROQ_API_KEY) apiKeys.groq = process.env.GROQ_API_KEY;
+  if (process.env.OPENAI_API_KEY)    apiKeys.openai = process.env.OPENAI_API_KEY;
+  if (process.env.GROQ_API_KEY)      apiKeys.groq   = process.env.GROQ_API_KEY;
 
   const defaults: SessionState = {
     provider: 'ollama',
@@ -30,20 +27,28 @@ export function loadSession(): SessionState {
     allowAllTools: false,
     workingDir: process.cwd(),
     apiKeys,
+    systemPrompt: DEFAULT_SYSTEM_PROMPT,
+    personas: DEFAULT_PERSONAS,
+    activePersona: 'pair-programmer',
+    pinnedContext: [],
+    autoCheckpoint: true,
+    sessionCost: 0,
+    lastAssistantMessage: '',
   };
 
   if (!fs.existsSync(STATE_FILE)) return defaults;
 
   try {
     const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) as Partial<SessionState>;
-    // Merge env keys on top of saved keys
     return {
       ...defaults,
       ...saved,
       apiKeys: { ...saved.apiKeys, ...apiKeys },
-      // Don't restore messages/allowAllTools across sessions
+      // Never restore live-session state
       messages: [],
       allowAllTools: false,
+      sessionCost: 0,
+      lastAssistantMessage: '',
     };
   } catch {
     return defaults;
@@ -52,13 +57,17 @@ export function loadSession(): SessionState {
 
 export function saveSession(state: SessionState): void {
   ensureDir();
-  // Persist everything except live messages and allowAllTools
   const toSave: Partial<SessionState> = {
-    provider: state.provider,
-    model: state.model,
-    checkpoints: state.checkpoints,
-    workingDir: state.workingDir,
-    apiKeys: state.apiKeys,
+    provider:       state.provider,
+    model:          state.model,
+    checkpoints:    state.checkpoints,
+    workingDir:     state.workingDir,
+    apiKeys:        state.apiKeys,
+    systemPrompt:   state.systemPrompt,
+    personas:       state.personas,
+    activePersona:  state.activePersona,
+    pinnedContext:  state.pinnedContext,
+    autoCheckpoint: state.autoCheckpoint,
   };
   fs.writeFileSync(STATE_FILE, JSON.stringify(toSave, null, 2), 'utf8');
 }

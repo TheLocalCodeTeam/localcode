@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import { PROVIDERS } from '../core/types.js';
+import { PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
 import { saveSession } from '../sessions/manager.js';
 import { exec } from 'child_process';
 const PROVIDER_OPTIONS = [
@@ -50,8 +50,14 @@ export function Setup({ onComplete }) {
             allowAllTools: false,
             workingDir: process.cwd(),
             apiKeys: finalKey ? { [finalProvider]: finalKey } : {},
+            systemPrompt: DEFAULT_SYSTEM_PROMPT,
+            personas: DEFAULT_PERSONAS,
+            activePersona: 'pair-programmer',
+            pinnedContext: [],
+            autoCheckpoint: true,
+            sessionCost: 0,
+            lastAssistantMessage: '',
         };
-        // Merge env keys
         if (process.env.ANTHROPIC_API_KEY)
             session.apiKeys.claude = process.env.ANTHROPIC_API_KEY;
         if (process.env.OPENAI_API_KEY)

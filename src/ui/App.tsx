@@ -5,6 +5,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
 import { exec } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 import {
   SessionState,
@@ -15,11 +18,13 @@ import {
   SlashCommand,
   Message,
   ToolCall,
+  DEFAULT_PERSONAS,
+  DEFAULT_SYSTEM_PROMPT,
 } from '../core/types.js';
 import { NyxHeader } from './NyxHeader.js';
 import { CommandPicker } from './CommandPicker.js';
 import { PermissionPrompt, needsPermission } from './PermissionPrompt.js';
-import { streamProvider, StreamChunk } from '../providers/client.js';
+import { streamProvider, StreamChunk, listModels, estimateCost } from '../providers/client.js';
 import { ToolExecutor } from '../tools/executor.js';
 import {
   saveSession,
@@ -338,6 +343,231 @@ export function App({ initialState }: AppProps): React.ReactElement {
         return;
       }
 
+      case '/sys': {
+        if (!args) {
+          sysMsg(`System prompt:\n\n${session.systemPrompt}\n\nPersona: ${session.activePersona ?? 'custom'}\nUsage: /sys <new prompt>`);
+          return;
+        }
+        setSession((s) => ({ ...s, systemPrompt: args, activePersona: null }));
+        sysMsg(`System prompt updated (${args.length} chars). Persona set to custom.`);
+        return;
+      }
+
+      case '/persona': {
+        const personas = session.personas;
+        if (!args) {
+          const list = personas
+            .map((p) => `  ${session.activePersona === p.name ? '▶ ' : '  '}${p.name}`)
+            .join('\n');
+          sysMsg(`Personas:\n${list}\n\nUsage: /persona <name>`);
+          return;
+        }
+        const found = personas.find((p) => p.name === args.toLowerCase());
+        if (!found) {
+          sysMsg(`Persona not found: ${args}. Options: ${personas.map((p) => p.name).join(', ')}`, true);
+          return;
+        }
+        setSession((s) => ({ ...s, systemPrompt: found.prompt, activePersona: found.name }));
+        sysMsg(`Switched to persona: ${found.name}`);
+        setMood('happy');
+        return;
+      }
+
+      case '/pin': {
+        if (!args) {
+          if (!session.pinnedContext.length) {
+            sysMsg('No pinned context. Usage: /pin <text to always include>');
+            return;
+          }
+          const list = session.pinnedContext.map((p, i) => `  ${i + 1}. ${p.slice(0, 80)}${p.length > 80 ? '…' : ''}`).join('\n');
+          sysMsg(`Pinned context (${session.pinnedContext.length}):\n${list}`);
+          return;
+        }
+        setSession((s) => ({ ...s, pinnedContext: [...s.pinnedContext, args] }));
+        sysMsg(`Pinned: "${args.slice(0, 60)}${args.length > 60 ? '…' : ''}"`);
+        return;
+      }
+
+      case '/unpin': {
+        if (!session.pinnedContext.length) {
+          sysMsg('No pinned context to remove.');
+          return;
+        }
+        if (!args) {
+          const list = session.pinnedContext.map((p, i) => `  ${i + 1}. ${p.slice(0, 80)}`).join('\n');
+          sysMsg(`Pinned context:\n${list}\n\nUsage: /unpin <number>`);
+          return;
+        }
+        const idx = parseInt(args, 10) - 1;
+        if (isNaN(idx) || idx < 0 || idx >= session.pinnedContext.length) {
+          sysMsg(`Invalid index: ${args}`, true);
+          return;
+        }
+        setSession((s) => ({
+          ...s,
+          pinnedContext: s.pinnedContext.filter((_, i) => i !== idx),
+        }));
+        sysMsg(`Unpinned item ${idx + 1}.`);
+        return;
+      }
+
+      case '/retry': {
+        const msgs = session.messages;
+        if (!msgs.length) {
+          sysMsg('Nothing to retry.');
+          return;
+        }
+        // Remove last assistant message, re-send last user message
+        const lastUser = [...msgs].reverse().find((m) => m.role === 'user');
+        if (!lastUser) { sysMsg('No user message to retry.', true); return; }
+        const trimmed = msgs.slice(0, msgs.lastIndexOf(lastUser));
+        setSession((s) => ({ ...s, messages: trimmed }));
+        setDisplayMessages((prev) => {
+          const lastAssistantIdx = [...prev].map((m, i) => ({ m, i })).reverse().find(({ m }) => m.role === 'assistant')?.i;
+          return lastAssistantIdx !== undefined ? prev.slice(0, lastAssistantIdx) : prev;
+        });
+        sysMsg('Retrying…');
+        await sendMessage(lastUser.content);
+        return;
+      }
+
+      case '/copy': {
+        if (!session.lastAssistantMessage) {
+          sysMsg('No response to copy yet.');
+          return;
+        }
+        try {
+          // Use pbcopy on Mac, xclip/xsel on Linux
+          const clipCmd = process.platform === 'darwin'
+            ? `echo ${JSON.stringify(session.lastAssistantMessage)} | pbcopy`
+            : `echo ${JSON.stringify(session.lastAssistantMessage)} | xclip -selection clipboard 2>/dev/null || echo ${JSON.stringify(session.lastAssistantMessage)} | xsel --clipboard --input`;
+          await new Promise<void>((res, rej) => {
+            exec(clipCmd, (err) => err ? rej(err) : res());
+          });
+          sysMsg(`Copied ${session.lastAssistantMessage.length} chars to clipboard.`);
+        } catch {
+          sysMsg('Clipboard not available. Here is the last response:\n\n' + session.lastAssistantMessage);
+        }
+        return;
+      }
+
+      case '/export': {
+        const filename = (args || `localcode-${Date.now()}`).replace(/\.md$/, '') + '.md';
+        const outPath = path.join(session.workingDir, filename);
+        const lines = [
+          `# LocalCode Session Export`,
+          ``,
+          `**Date:** ${new Date().toLocaleString()}`,
+          `**Provider:** ${PROVIDERS[session.provider].displayName}`,
+          `**Model:** ${session.model}`,
+          `**Persona:** ${session.activePersona ?? 'custom'}`,
+          ``,
+          `---`,
+          ``,
+          ...session.messages.map((m) => {
+            const role = m.role === 'user' ? '### You' : m.role === 'assistant' ? '### Nyx' : '### System';
+            return `${role}\n\n${m.content}\n`;
+          }),
+        ];
+        fs.writeFileSync(outPath, lines.join('\n'), 'utf8');
+        sysMsg(`Exported to ${outPath}`);
+        return;
+      }
+
+      case '/undo': {
+        const files = executorRef.current.getSessionFiles();
+        const paths = Object.keys(files);
+        if (!paths.length) {
+          sysMsg('No file changes to undo this session.');
+          return;
+        }
+        const result = executorRef.current.undoLastChange();
+        if (result) {
+          sysMsg(`Undone: ${result}`);
+        } else {
+          sysMsg('Nothing to undo.');
+        }
+        return;
+      }
+
+      case '/todo': {
+        if (!session.messages.length) {
+          sysMsg('No conversation to extract todos from.');
+          return;
+        }
+        sysMsg('Extracting todos…');
+        setMood('thinking');
+        const todoPrompt = `From this conversation, extract a concise numbered todo list of outstanding tasks, bugs, and things to implement. Format as a simple numbered list. If there are no clear todos, say so.\n\n${session.messages.slice(-20).map((m) => `${m.role}: ${m.content.slice(0, 400)}`).join('\n\n')}`;
+        let todos = '';
+        await streamProvider(session.provider, session.apiKeys, session.model, [{ role: 'user', content: todoPrompt }], (c) => { if (c.text) todos += c.text; });
+        sysMsg(`Todos:\n${todos.trim()}`);
+        setMood('idle');
+        return;
+      }
+
+      case '/web': {
+        if (!args) { sysMsg('Usage: /web <search query>'); return; }
+        sysMsg(`Searching: "${args}"…`);
+        setMood('thinking');
+        try {
+          const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(args)}`;
+          const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+          const text = await res.text();
+          // Extract visible text snippets from results
+          const snippets = [...text.matchAll(/class="result__snippet"[^>]*>([^<]{20,300})</g)]
+            .slice(0, 5)
+            .map((m, i) => `${i + 1}. ${m[1].replace(/&amp;/g,'&').replace(/&#x27;/g,"'").replace(/&quot;/g,'"').trim()}`);
+          if (!snippets.length) {
+            sysMsg('No results found. Try a different query.');
+            setMood('idle');
+            return;
+          }
+          const contextText = `Web search results for "${args}":\n\n${snippets.join('\n\n')}`;
+          const webMsg: Message = { role: 'user', content: contextText };
+          setSession((s) => ({ ...s, messages: [...s.messages, webMsg] }));
+          sysMsg(`Added ${snippets.length} search results to context.`);
+        } catch {
+          sysMsg('Web search failed. Check your connection.', true);
+        }
+        setMood('idle');
+        return;
+      }
+
+      case '/open': {
+        if (!args) { sysMsg('Usage: /open <file>'); return; }
+        const editor = process.env.EDITOR || (process.platform === 'darwin' ? 'open' : 'xdg-open');
+        exec(`${editor} ${JSON.stringify(args)}`, { cwd: session.workingDir }, (err) => {
+          if (err) sysMsg(`Could not open: ${err.message}`, true);
+          else sysMsg(`Opened ${args} in ${editor}`);
+        });
+        return;
+      }
+
+      case '/models': {
+        sysMsg(`Fetching models for ${PROVIDERS[session.provider].displayName}…`);
+        setMood('thinking');
+        const models = await listModels(session.provider, session.apiKeys);
+        if (!models.length) {
+          sysMsg('No models found. Make sure your API key is set and the provider is reachable.', true);
+        } else {
+          sysMsg(`Available models (${models.length}):\n${models.map((m) => `  · ${m}`).join('\n')}\n\nUse /model <name> to switch.`);
+        }
+        setMood('idle');
+        return;
+      }
+
+      case '/cost': {
+        const tokens = estimateTokens(session.messages);
+        const cost = session.sessionCost;
+        const provider = PROVIDERS[session.provider];
+        if (!provider.requiresKey) {
+          sysMsg(`Provider: ${provider.displayName} (free/local)\n~Tokens this session: ${tokens.toLocaleString()}\nNo cost estimate for local models.`);
+        } else {
+          sysMsg(`Provider: ${provider.displayName}\nModel: ${session.model}\n~Tokens this session: ${tokens.toLocaleString()}\nEstimated cost: $${cost.toFixed(6)} USD`);
+        }
+        return;
+      }
+
       case '/exit': {
         saveSession(session);
         exit();
@@ -387,11 +617,15 @@ export function App({ initialState }: AppProps): React.ReactElement {
     let accumulated = '';
 
     // We need the current session state
-    // Use a ref to get the latest session
     const currentSession = session;
 
     const run = async (): Promise<void> => {
-      const msgs: Message[] = [...currentSession.messages, userMsg];
+      // Build context: pinned items prepended as a system-style user message
+      const pinnedMsg: Message[] = currentSession.pinnedContext.length
+        ? [{ role: 'user', content: `[Pinned context — always relevant]\n${currentSession.pinnedContext.join('\n')}` }]
+        : [];
+
+      const msgs: Message[] = [...pinnedMsg, ...currentSession.messages, userMsg];
 
       await streamProvider(
         currentSession.provider,
@@ -408,10 +642,8 @@ export function App({ initialState }: AppProps): React.ReactElement {
             case 'tool_call': {
               const toolCall = chunk.toolCall!;
 
-              // Finalize text streaming
               updateDisplay(streamId, { content: accumulated, streaming: false });
 
-              // Show tool call
               const toolDisplayId = addDisplay({
                 role: 'tool',
                 content: `${toolCall.name}(${Object.entries(toolCall.args)
@@ -472,14 +704,37 @@ export function App({ initialState }: AppProps): React.ReactElement {
             case 'done':
               updateDisplay(streamId, { streaming: false });
               if (accumulated.trim()) {
-                setSession((s) => ({
-                  ...s,
-                  messages: [
+                const inputTokens = Math.ceil(msgs.reduce((a, m) => a + m.content.length, 0) / 4);
+                const outputTokens = Math.ceil(accumulated.length / 4);
+                const cost = estimateCost(currentSession.model, inputTokens, outputTokens);
+                setSession((s) => {
+                  const newMessages = [
                     ...s.messages,
                     userMsg,
-                    { role: 'assistant', content: accumulated },
-                  ],
-                }));
+                    { role: 'assistant' as const, content: accumulated },
+                  ];
+                  // Auto-checkpoint every 20 messages
+                  const shouldCheckpoint = s.autoCheckpoint && newMessages.length % 20 === 0;
+                  const checkpoints = shouldCheckpoint
+                    ? [...s.checkpoints, {
+                        id: `cp_auto_${Date.now()}`,
+                        label: `auto-${newMessages.length}msgs`,
+                        timestamp: Date.now(),
+                        messages: newMessages,
+                        files: {},
+                      }]
+                    : s.checkpoints;
+                  if (shouldCheckpoint) {
+                    setTimeout(() => sysMsg(`Auto-checkpoint saved at ${newMessages.length} messages.`), 100);
+                  }
+                  return {
+                    ...s,
+                    messages: newMessages,
+                    lastAssistantMessage: accumulated,
+                    sessionCost: s.sessionCost + cost,
+                    checkpoints,
+                  };
+                });
               }
               break;
 
@@ -493,6 +748,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
               break;
           }
         },
+        currentSession.systemPrompt,
       );
     };
 
@@ -637,6 +893,8 @@ export function App({ initialState }: AppProps): React.ReactElement {
         workingDir={session.workingDir}
         tokenCount={estimateTokens(session.messages)}
         allowAll={session.allowAllTools}
+        persona={session.activePersona}
+        sessionCost={session.sessionCost}
       />
 
       {/* Message log — show last N messages */}

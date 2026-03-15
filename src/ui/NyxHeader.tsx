@@ -26,6 +26,8 @@ interface NyxHeaderProps {
   workingDir: string;
   tokenCount: number;
   allowAll: boolean;
+  persona: string | null;
+  sessionCost: number;
 }
 
 export function NyxHeader({
@@ -35,6 +37,8 @@ export function NyxHeader({
   workingDir,
   tokenCount,
   allowAll,
+  persona,
+  sessionCost,
 }: NyxHeaderProps): React.ReactElement {
   const art = NYX_ART[mood];
   const providerConfig = PROVIDERS[provider];
@@ -77,12 +81,12 @@ export function NyxHeader({
         {/* Tokens + flags */}
         <Box flexDirection="row">
           <Text color="gray" dimColor>tokens    </Text>
-          <Text color={tokenCount > 50000 ? 'red' : 'white'}>
+          <Text color={tokenCount > 100000 ? 'red' : tokenCount > 50000 ? 'yellow' : 'white'}>
             {tokenCount.toLocaleString()}
           </Text>
-          {allowAll && (
-            <Text color="yellow" dimColor>  ✓ allowall</Text>
-          )}
+          {persona && <Text color="gray" dimColor>  ◐ {persona}</Text>}
+          {allowAll && <Text color="yellow" dimColor>  ✓ allowall</Text>}
+          {sessionCost > 0 && <Text color="gray" dimColor>  ${sessionCost.toFixed(4)}</Text>}
         </Box>
       </Box>
 

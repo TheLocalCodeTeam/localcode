@@ -7,4 +7,5 @@ export declare function createCheckpoint(state: SessionState, label: string): {
 };
 export declare function restoreCheckpoint(state: SessionState, checkpointId: string): SessionState | null;
 export declare function estimateTokens(messages: Message[]): number;
+export declare function isFirstRun(): boolean;
 //# sourceMappingURL=manager.d.ts.map

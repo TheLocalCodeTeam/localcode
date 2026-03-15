@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import { SessionState, Provider, PROVIDERS } from '../core/types.js';
+import { SessionState, Provider, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
 import { saveSession } from '../sessions/manager.js';
 import { exec } from 'child_process';
 
@@ -67,8 +67,14 @@ export function Setup({ onComplete }: SetupProps): React.ReactElement {
       allowAllTools: false,
       workingDir: process.cwd(),
       apiKeys: finalKey ? { [finalProvider]: finalKey } as any : {},
+      systemPrompt: DEFAULT_SYSTEM_PROMPT,
+      personas: DEFAULT_PERSONAS,
+      activePersona: 'pair-programmer',
+      pinnedContext: [],
+      autoCheckpoint: true,
+      sessionCost: 0,
+      lastAssistantMessage: '',
     };
-    // Merge env keys
     if (process.env.ANTHROPIC_API_KEY) session.apiKeys.claude = process.env.ANTHROPIC_API_KEY;
     if (process.env.OPENAI_API_KEY)    session.apiKeys.openai = process.env.OPENAI_API_KEY;
     if (process.env.GROQ_API_KEY)      session.apiKeys.groq   = process.env.GROQ_API_KEY;

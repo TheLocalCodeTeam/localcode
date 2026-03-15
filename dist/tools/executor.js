@@ -23,7 +23,8 @@ function buildDiff(filePath, before, after) {
 }
 export class ToolExecutor {
     workingDir;
-    sessionFiles = {}; // path -> content before edit
+    sessionFiles = {}; // path -> original content before first edit
+    changeHistory = []; // ordered list for undo
     constructor(workingDir) {
         this.workingDir = workingDir;
     }
@@ -59,9 +60,9 @@ export class ToolExecutor {
     writeFile(args) {
         const abs = this.resolvePath(args.path);
         const before = fs.existsSync(abs) ? fs.readFileSync(abs, 'utf8') : '';
-        // Snapshot before edit for diff
         if (!this.sessionFiles[abs])
             this.sessionFiles[abs] = before;
+        this.changeHistory.push({ path: abs, before });
         fs.mkdirSync(path.dirname(abs), { recursive: true });
         fs.writeFileSync(abs, args.content, 'utf8');
         const diff = buildDiff(abs, before, args.content);
@@ -78,6 +79,7 @@ export class ToolExecutor {
         }
         if (!this.sessionFiles[abs])
             this.sessionFiles[abs] = before;
+        this.changeHistory.push({ path: abs, before });
         const after = before.replace(args.old_str, args.new_str);
         fs.writeFileSync(abs, after, 'utf8');
         const diff = buildDiff(abs, before, after);
@@ -120,6 +122,13 @@ export class ToolExecutor {
     }
     getSessionFiles() {
         return this.sessionFiles;
+    }
+    undoLastChange() {
+        const last = this.changeHistory.pop();
+        if (!last)
+            return null;
+        fs.writeFileSync(last.path, last.before, 'utf8');
+        return last.path;
     }
 }
 //# sourceMappingURL=executor.js.map

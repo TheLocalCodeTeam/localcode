@@ -1,7 +1,7 @@
-// src/sessions/manager.ts
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
 import { PROVIDERS } from '../core/types.js';
 const SESSION_DIR = path.join(os.homedir(), '.localcode');
 const STATE_FILE = path.join(SESSION_DIR, 'session.json');
@@ -10,7 +10,6 @@ function ensureDir() {
 }
 export function loadSession() {
     ensureDir();
-    // Auto-detect API keys from env
     const apiKeys = {};
     if (process.env.ANTHROPIC_API_KEY)
         apiKeys.claude = process.env.ANTHROPIC_API_KEY;
@@ -26,19 +25,27 @@ export function loadSession() {
         allowAllTools: false,
         workingDir: process.cwd(),
         apiKeys,
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
+        personas: DEFAULT_PERSONAS,
+        activePersona: 'pair-programmer',
+        pinnedContext: [],
+        autoCheckpoint: true,
+        sessionCost: 0,
+        lastAssistantMessage: '',
     };
     if (!fs.existsSync(STATE_FILE))
         return defaults;
     try {
         const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
-        // Merge env keys on top of saved keys
         return {
             ...defaults,
             ...saved,
             apiKeys: { ...saved.apiKeys, ...apiKeys },
-            // Don't restore messages/allowAllTools across sessions
+            // Never restore live-session state
             messages: [],
             allowAllTools: false,
+            sessionCost: 0,
+            lastAssistantMessage: '',
         };
     }
     catch {
@@ -47,13 +54,17 @@ export function loadSession() {
 }
 export function saveSession(state) {
     ensureDir();
-    // Persist everything except live messages and allowAllTools
     const toSave = {
         provider: state.provider,
         model: state.model,
         checkpoints: state.checkpoints,
         workingDir: state.workingDir,
         apiKeys: state.apiKeys,
+        systemPrompt: state.systemPrompt,
+        personas: state.personas,
+        activePersona: state.activePersona,
+        pinnedContext: state.pinnedContext,
+        autoCheckpoint: state.autoCheckpoint,
     };
     fs.writeFileSync(STATE_FILE, JSON.stringify(toSave, null, 2), 'utf8');
 }

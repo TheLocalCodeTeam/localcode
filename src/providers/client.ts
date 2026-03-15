@@ -353,27 +353,98 @@ async function streamOpenAICompat(
 
 // ─── Unified entrypoint ───────────────────────────────────────────────────────
 
+// ─── Token cost estimates (per 1M tokens, USD) ────────────────────────────────
+
+const COST_PER_1M: Partial<Record<string, { in: number; out: number }>> = {
+  'claude-sonnet-4-5':         { in: 3,    out: 15 },
+  'claude-opus-4-5':           { in: 15,   out: 75 },
+  'claude-haiku-4-5':          { in: 0.25, out: 1.25 },
+  'gpt-4o':                    { in: 2.5,  out: 10 },
+  'gpt-4o-mini':               { in: 0.15, out: 0.6 },
+  'llama-3.3-70b-versatile':   { in: 0.59, out: 0.79 },
+  'mixtral-8x7b-32768':        { in: 0.24, out: 0.24 },
+};
+
+export function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
+  const rates = COST_PER_1M[model];
+  if (!rates) return 0;
+  return (inputTokens / 1_000_000) * rates.in + (outputTokens / 1_000_000) * rates.out;
+}
+
 export async function streamProvider(
   provider: Provider,
   apiKeys: Partial<Record<Provider, string>>,
   model: string,
   messages: Message[],
   onChunk: ChunkCallback,
+  systemPrompt?: string,
 ): Promise<void> {
   const config = { ...PROVIDERS[provider], apiKey: apiKeys[provider] };
 
+  // Prepend system prompt as first message if provided
+  const msgsWithSys: Message[] = systemPrompt
+    ? [{ role: 'system', content: systemPrompt }, ...messages]
+    : messages;
+
   switch (provider) {
     case 'ollama':
-      return streamOllama(config, model, messages, onChunk);
+      return streamOllama(config, model, msgsWithSys, onChunk);
     case 'claude':
-      return streamClaude(config, model, messages, onChunk);
+      return streamClaude(config, model, msgsWithSys, onChunk);
     case 'openai':
       return streamOpenAICompat(
-        config.baseUrl, config.apiKey ?? '', model, messages, onChunk, 'OpenAI',
+        config.baseUrl, config.apiKey ?? '', model, msgsWithSys, onChunk, 'OpenAI',
       );
     case 'groq':
       return streamOpenAICompat(
-        config.baseUrl, config.apiKey ?? '', model, messages, onChunk, 'Groq',
+        config.baseUrl, config.apiKey ?? '', model, msgsWithSys, onChunk, 'Groq',
       );
+  }
+}
+
+// ─── Model listing ─────────────────────────────────────────────────────────────
+
+export async function listModels(
+  provider: Provider,
+  apiKeys: Partial<Record<Provider, string>>,
+): Promise<string[]> {
+  try {
+    if (provider === 'ollama') {
+      const res = await fetch('http://localhost:11434/api/tags');
+      if (!res.ok) return [];
+      const data = await res.json() as { models: Array<{ name: string }> };
+      return data.models.map((m) => m.name);
+    }
+    if (provider === 'openai') {
+      const key = apiKeys.openai;
+      if (!key) return [];
+      const res = await fetch('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (!res.ok) return [];
+      const data = await res.json() as { data: Array<{ id: string }> };
+      return data.data.map((m) => m.id).filter((id) => id.startsWith('gpt')).sort();
+    }
+    if (provider === 'groq') {
+      const key = apiKeys.groq;
+      if (!key) return [];
+      const res = await fetch('https://api.groq.com/openai/v1/models', {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (!res.ok) return [];
+      const data = await res.json() as { data: Array<{ id: string }> };
+      return data.data.map((m) => m.id).sort();
+    }
+    if (provider === 'claude') {
+      // Anthropic doesn't have a public list endpoint — return known models
+      return [
+        'claude-opus-4-5',
+        'claude-sonnet-4-5',
+        'claude-haiku-4-5-20251001',
+      ];
+    }
+    return [];
+  } catch {
+    return [];
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@localcode/cli",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Local AI coding assistant — Ollama, Claude, OpenAI, Groq",
   "bin": {
     "localcode": "./dist/bin/localcode.js"

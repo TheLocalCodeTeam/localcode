@@ -7,7 +7,9 @@ interface NyxHeaderProps {
     workingDir: string;
     tokenCount: number;
     allowAll: boolean;
+    persona: string | null;
+    sessionCost: number;
 }
-export declare function NyxHeader({ mood, provider, model, workingDir, tokenCount, allowAll, }: NyxHeaderProps): React.ReactElement;
+export declare function NyxHeader({ mood, provider, model, workingDir, tokenCount, allowAll, persona, sessionCost, }: NyxHeaderProps): React.ReactElement;
 export {};
 //# sourceMappingURL=NyxHeader.d.ts.map
