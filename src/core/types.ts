@@ -2,6 +2,8 @@
 
 export type Provider = 'ollama' | 'claude' | 'openai' | 'groq';
 
+export type ApprovalMode = 'suggest' | 'auto-edit' | 'full-auto';
+
 export interface ProviderConfig {
   name: Provider;
   displayName: string;
@@ -54,7 +56,7 @@ export interface SessionState {
   model: string;
   messages: Message[];
   checkpoints: Checkpoint[];
-  allowAllTools: boolean;
+  approvalMode: ApprovalMode;
   workingDir: string;
   apiKeys: Partial<Record<Provider, string>>;
   systemPrompt: string;
@@ -62,6 +64,7 @@ export interface SessionState {
   activePersona: string | null;
   pinnedContext: string[];        // messages always prepended to context
   autoCheckpoint: boolean;        // auto-save checkpoint every 20 messages
+  maxSteps: number;               // max agent tool-call iterations per response
   sessionCost: number;            // estimated USD cost this session
   lastAssistantMessage: string;   // for /retry and /copy
 }
@@ -70,7 +73,15 @@ export const DEFAULT_SYSTEM_PROMPT = `You are Nyx, an AI coding assistant built 
 
 You are a friendly pair programmer who explains things as you go. When you write or edit code, briefly explain what you changed and why. When something is complex, break it down. Be direct and concise — no fluff — but always friendly.
 
-You have access to tools: read_file, write_file, patch_file, run_shell, list_dir, git_operation. Use them proactively. Before editing a file you haven't read yet, read it first. When you run shell commands, explain what they do.
+You have access to these tools — use them proactively:
+- read_file / write_file / patch_file / delete_file / move_file — file operations
+- search_files — grep-like: search file contents by regex/string across the project
+- find_files — find files by name pattern (e.g. "*.ts", "*.test.*")
+- list_dir — list directory contents (recursive optional)
+- run_shell — run any shell command
+- git_operation — run git commands
+
+Workflow: before editing a file you haven't read, read it first. Use search_files to find symbols across the codebase. Use find_files to locate files by name. Explain shell commands before running them.
 
 Never refuse to help with code. If something is risky, warn the user and ask — don't just refuse.
 
@@ -233,6 +244,32 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     detail: 'Reverts the most recent file write or patch made by the model this session.',
     category: 'session',
   },
+  {
+    name: 'allowall',
+    trigger: '/allowall',
+    icon: '⚡',
+    description: 'Cycle approval mode: suggest → auto-edit → full-auto',
+    detail: 'Cycles through approval modes. suggest: prompt before every write/shell. auto-edit: only prompt for shell. full-auto: run everything without asking.',
+    category: 'session',
+  },
+  {
+    name: 'mode',
+    trigger: '/mode',
+    icon: '◉',
+    description: 'Set approval mode: suggest / auto-edit / full-auto',
+    detail: 'suggest: prompt before every write/shell. auto-edit: file edits auto-approved; only shell needs approval. full-auto: run everything without prompting.',
+    usage: '/mode  |  /mode auto-edit  |  /mode full-auto',
+    category: 'session',
+  },
+  {
+    name: 'steps',
+    trigger: '/steps',
+    icon: '⇥',
+    description: 'Set max agent steps per response',
+    detail: 'Controls how many tool-call iterations the agent can take before stopping. Default: 20.',
+    usage: '/steps 40',
+    category: 'session',
+  },
   // ── System & Personas ─────────────────────────────────────────────────────
   {
     name: 'sys',
@@ -333,6 +370,15 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   },
   // ── Git ───────────────────────────────────────────────────────────────────
   {
+    name: 'review',
+    trigger: '/review',
+    icon: '◎',
+    description: 'AI code review of current changes',
+    detail: 'Reviews staged changes (or HEAD diff if nothing staged). Flags bugs, security issues, anti-patterns, and suggestions.',
+    usage: '/review',
+    category: 'git',
+  },
+  {
     name: 'commit',
     trigger: '/commit',
     icon: '⎇',
@@ -342,6 +388,41 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     category: 'git',
   },
   // ── Tools ─────────────────────────────────────────────────────────────────
+  {
+    name: 'init',
+    trigger: '/init',
+    icon: '⬡',
+    description: 'Generate a .nyx.md project config for this repo',
+    detail: 'Analyzes the project structure and generates a .nyx.md file with project-specific context, conventions, and instructions.',
+    usage: '/init',
+    category: 'tools',
+  },
+  {
+    name: 'doctor',
+    trigger: '/doctor',
+    icon: '✚',
+    description: 'Check LocalCode health — providers, tools, git, memory',
+    detail: 'Runs diagnostics: Ollama status, API keys, git repo, .nyx.md, MCP servers, hooks, and Node.js version.',
+    usage: '/doctor',
+    category: 'tools',
+  },
+  {
+    name: 'memory',
+    trigger: '/memory',
+    icon: '◈',
+    description: 'Show and manage memory files (.nyx.md)',
+    detail: 'Shows all loaded .nyx.md memory files. Use /memory edit to open global ~/.nyx.md in your editor.',
+    usage: '/memory  |  /memory edit',
+    category: 'tools',
+  },
+  {
+    name: 'hooks',
+    trigger: '/hooks',
+    icon: '⚙',
+    description: 'Show configured hooks (PreToolUse / PostToolUse / Notification)',
+    detail: 'Hooks run shell commands before/after tool calls. Configure in ~/.localcode/hooks.json.',
+    category: 'tools',
+  },
   {
     name: 'mcp',
     trigger: '/mcp',
@@ -377,6 +458,52 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     description: 'Change model',
     detail: 'Switch to any model supported by the active provider.',
     usage: '/model claude-opus-4-5  |  /model qwen2.5-coder:7b',
+    category: 'providers',
+  },
+  // ── Navigation & Quick Tools ──────────────────────────────────────────────
+  {
+    name: 'cd',
+    trigger: '/cd',
+    icon: '⇒',
+    description: 'Change working directory',
+    detail: 'Change the working directory for file operations and git commands. All tool paths update immediately.',
+    usage: '/cd ../other-project  |  /cd /absolute/path',
+    category: 'tools',
+  },
+  {
+    name: 'ls',
+    trigger: '/ls',
+    icon: '≡',
+    description: 'List current directory',
+    detail: 'Quick directory listing without asking the AI. Use /ls <path> for a specific directory.',
+    usage: '/ls  |  /ls src/',
+    category: 'tools',
+  },
+  {
+    name: 'search',
+    trigger: '/search',
+    icon: '⌖',
+    description: 'Search file contents (grep)',
+    detail: 'Directly search for a pattern across all files in the working directory.',
+    usage: '/search TODO  |  /search "function render"',
+    category: 'tools',
+  },
+  {
+    name: 'find',
+    trigger: '/find',
+    icon: '◎',
+    description: 'Find files by name pattern',
+    detail: 'Find files matching a glob pattern without asking the AI.',
+    usage: '/find *.ts  |  /find *.test.*',
+    category: 'tools',
+  },
+  {
+    name: 'ping',
+    trigger: '/ping',
+    icon: '◉',
+    description: 'Test provider connectivity and latency',
+    detail: 'Sends a test request to the current provider and measures response time. Useful for diagnosing connection issues.',
+    usage: '/ping',
     category: 'providers',
   },
 ];

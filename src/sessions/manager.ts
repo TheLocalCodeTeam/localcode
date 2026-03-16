@@ -11,6 +11,67 @@ function ensureDir(): void {
   fs.mkdirSync(SESSION_DIR, { recursive: true });
 }
 
+// ── Hooks ─────────────────────────────────────────────────────────────────────
+
+export interface HookEntry {
+  matcher?: string;  // tool name or regex pattern; if absent, matches all
+  command: string;
+}
+
+export interface HooksConfig {
+  PreToolUse?: HookEntry[];
+  PostToolUse?: HookEntry[];
+  Notification?: HookEntry[];
+}
+
+export function loadHooks(): HooksConfig {
+  const hooksPath = path.join(SESSION_DIR, 'hooks.json');
+  if (!fs.existsSync(hooksPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(hooksPath, 'utf8')) as HooksConfig;
+  } catch {
+    return {};
+  }
+}
+
+// ── Session ───────────────────────────────────────────────────────────────────
+
+export interface NyxMemory {
+  source: string;   // file path
+  content: string;
+}
+
+/** Load .nyx.md files from the global home dir and the project working dir. */
+export function loadNyxMemories(workingDir: string): NyxMemory[] {
+  const memories: NyxMemory[] = [];
+
+  // 1. Global memory: ~/.nyx.md
+  const globalPath = path.join(os.homedir(), '.nyx.md');
+  if (fs.existsSync(globalPath)) {
+    try {
+      const content = fs.readFileSync(globalPath, 'utf8').trim();
+      if (content) memories.push({ source: globalPath, content });
+    } catch { /* ok */ }
+  }
+
+  // 2. Project memory: <workingDir>/.nyx.md
+  const projectPath = path.join(workingDir, '.nyx.md');
+  if (fs.existsSync(projectPath) && projectPath !== globalPath) {
+    try {
+      const content = fs.readFileSync(projectPath, 'utf8').trim();
+      if (content) memories.push({ source: projectPath, content });
+    } catch { /* ok */ }
+  }
+
+  return memories;
+}
+
+/** @deprecated use loadNyxMemories */
+export function loadNyxMd(workingDir: string): string | null {
+  const memories = loadNyxMemories(workingDir);
+  return memories.length > 0 ? memories.map((m) => m.content).join('\n\n') : null;
+}
+
 export function loadSession(): SessionState {
   ensureDir();
 
@@ -24,7 +85,7 @@ export function loadSession(): SessionState {
     model: PROVIDERS.ollama.defaultModel,
     messages: [],
     checkpoints: [],
-    allowAllTools: false,
+    approvalMode: 'suggest',
     workingDir: process.cwd(),
     apiKeys,
     systemPrompt: DEFAULT_SYSTEM_PROMPT,
@@ -32,6 +93,7 @@ export function loadSession(): SessionState {
     activePersona: 'pair-programmer',
     pinnedContext: [],
     autoCheckpoint: true,
+    maxSteps: 20,
     sessionCost: 0,
     lastAssistantMessage: '',
   };
@@ -46,7 +108,6 @@ export function loadSession(): SessionState {
       apiKeys: { ...saved.apiKeys, ...apiKeys },
       // Never restore live-session state
       messages: [],
-      allowAllTools: false,
       sessionCost: 0,
       lastAssistantMessage: '',
     };
@@ -61,6 +122,7 @@ export function saveSession(state: SessionState): void {
     provider:       state.provider,
     model:          state.model,
     checkpoints:    state.checkpoints,
+    approvalMode:   state.approvalMode,
     workingDir:     state.workingDir,
     apiKeys:        state.apiKeys,
     systemPrompt:   state.systemPrompt,
@@ -68,6 +130,7 @@ export function saveSession(state: SessionState): void {
     activePersona:  state.activePersona,
     pinnedContext:  state.pinnedContext,
     autoCheckpoint: state.autoCheckpoint,
+    maxSteps:       state.maxSteps,
   };
   fs.writeFileSync(STATE_FILE, JSON.stringify(toSave, null, 2), 'utf8');
 }

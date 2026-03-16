@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import { SessionState, Provider, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
+import { SessionState, Provider, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS, ApprovalMode } from '../core/types.js';
 import { saveSession } from '../sessions/manager.js';
 import { exec } from 'child_process';
 
@@ -64,7 +64,7 @@ export function Setup({ onComplete }: SetupProps): React.ReactElement {
       model: defaultModel,
       messages: [],
       checkpoints: [],
-      allowAllTools: false,
+      approvalMode: 'suggest' as ApprovalMode,
       workingDir: process.cwd(),
       apiKeys: finalKey ? { [finalProvider]: finalKey } as any : {},
       systemPrompt: DEFAULT_SYSTEM_PROMPT,
@@ -72,6 +72,7 @@ export function Setup({ onComplete }: SetupProps): React.ReactElement {
       activePersona: 'pair-programmer',
       pinnedContext: [],
       autoCheckpoint: true,
+      maxSteps: 20,
       sessionCost: 0,
       lastAssistantMessage: '',
     };

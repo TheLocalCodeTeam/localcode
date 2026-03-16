@@ -30,19 +30,68 @@ OPTIONS
   --yes           Skip first-run setup (use saved config or defaults)
 
 SLASH COMMANDS (inside the app)
-  /               Open command picker
+  /               Open command picker (searchable)
+
+  Session
+  /clear          Clear conversation history
+  /compact        Summarize & compress conversation
+  /checkpoint     Save a checkpoint
+  /restore        Restore a checkpoint
+  /retry          Regenerate last response
+  /copy           Copy last response to clipboard
+  /export         Export conversation to markdown
+  /undo           Undo last file change
+  /status         Show session info
+  /exit           Exit
+
+  Approval & Agent
+  /mode           Set approval mode: suggest / auto-edit / full-auto
+  /allowall       Cycle approval mode
+  /steps          Set max agent steps per response (default: 20)
+
+  System & Personas
+  /sys            View or set system prompt
+  /persona        Switch Nyx persona (pair-programmer, senior-engineer, etc.)
+
+  Context
+  /context        Add file or folder to context (@path also works inline)
+  /pin            Pin context that survives /compact
+  /unpin          Remove pinned context
+  /todo           Extract todo list from conversation
+  /web            Search the web and inject results
+  /open           Open a file in your editor
+  /diff           Show session file changes (unified diff)
+
+  Git
+  /commit         AI-generated git commit
+  /review         AI code review of current changes
+
+  Providers & Models
   /provider       Switch AI provider (ollama, claude, openai, groq)
   /apikey         Set API key for current provider
   /model          Change model
-  /checkpoint     Save a checkpoint
-  /restore        Restore a checkpoint
-  /commit         AI-generated git commit (co-authored by Nyx)
-  /diff           Show session file changes
-  /context        Add file/folder to context
-  /allowall       Toggle permission prompts
-  /compact        Summarize conversation
-  /status         Session info
-  /exit           Exit
+  /models         List available models for current provider
+  /cost           Show estimated session cost
+
+  Tools & Memory
+  /init           Generate .nyx.md project config
+  /doctor         Health check — providers, tools, git, memory
+  /memory         Show and manage .nyx.md memory files
+  /hooks          Show configured hooks
+  /mcp            Manage MCP servers
+
+  Navigation
+  /cd             Change working directory
+  /ls             List directory contents
+  /find           Find files by name pattern (e.g. /find *.ts)
+  /search         Search file contents (e.g. /search TODO)
+  /ping           Test provider connectivity and latency
+
+MULTILINE INPUT
+  Ctrl+E         Toggle multiline mode
+  Enter          Add line (in multiline mode)
+  Ctrl+D         Submit multiline input
+  Escape         Cancel in-flight request
 
 CONTEXT INJECTION
   @file.ts        Inject file contents inline in your message
@@ -52,6 +101,13 @@ ENV VARS
   ANTHROPIC_API_KEY   Auto-loaded for Claude provider
   OPENAI_API_KEY      Auto-loaded for OpenAI provider
   GROQ_API_KEY        Auto-loaded for Groq provider
+
+MEMORY FILES
+  ~/.nyx.md              Global memory — always loaded
+  <project>/.nyx.md     Project memory — loaded when cwd matches
+
+HOOKS
+  ~/.localcode/hooks.json   PreToolUse / PostToolUse / Notification hooks
 
 EXAMPLES
   localcode

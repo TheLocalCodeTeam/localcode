@@ -4,10 +4,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
-import { exec } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { createRequire } from 'module';
+
+const _require = createRequire(import.meta.url);
+const pkg = _require('../../package.json') as { version: string };
 
 import {
   SessionState,
@@ -20,10 +24,12 @@ import {
   ToolCall,
   DEFAULT_PERSONAS,
   DEFAULT_SYSTEM_PROMPT,
+  ApprovalMode,
 } from '../core/types.js';
 import { NyxHeader } from './NyxHeader.js';
 import { CommandPicker } from './CommandPicker.js';
-import { PermissionPrompt, needsPermission } from './PermissionPrompt.js';
+import { PermissionPrompt, needsApproval } from './PermissionPrompt.js';
+import { MarkdownText } from './MarkdownText.js';
 import { runAgent, streamProvider, StreamChunk, listModels, estimateCost, BUILTIN_TOOLS } from '../providers/client.js';
 import { ToolExecutor } from '../tools/executor.js';
 import { McpManager } from '../mcp/manager.js';
@@ -32,6 +38,9 @@ import {
   createCheckpoint,
   restoreCheckpoint,
   estimateTokens,
+  loadNyxMemories,
+  loadHooks,
+  HooksConfig,
 } from '../sessions/manager.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,6 +52,7 @@ interface DisplayMessage {
   streaming?: boolean;
   isError?: boolean;
   toolName?: string;
+  timestamp?: number;
 }
 
 interface PendingPermission {
@@ -72,10 +82,28 @@ export function App({ initialState }: AppProps): React.ReactElement {
   const [pendingPermission, setPendingPermission] = useState<PendingPermission | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isMultiline, setIsMultiline] = useState(false);
+  const [multilineBuffer, setMultilineBuffer] = useState<string[]>([]);
 
-  const executorRef  = useRef<ToolExecutor>(new ToolExecutor(initialState.workingDir));
-  const mcpRef       = useRef<McpManager>(new McpManager());
+  const executorRef    = useRef<ToolExecutor>(new ToolExecutor(initialState.workingDir));
+  const mcpRef         = useRef<McpManager>(new McpManager());
   const streamingIdRef = useRef<string | null>(null);
+  const abortRef       = useRef<AbortController | null>(null);
+  const hooksRef       = useRef<HooksConfig>(loadHooks());
+
+  // Load .nyx.md memory hierarchy on mount (global + project)
+  useEffect(() => {
+    const memories = loadNyxMemories(initialState.workingDir);
+    if (memories.length > 0) {
+      const combined = memories.map((m) => `[Memory: ${m.source}]\n${m.content}`).join('\n\n');
+      setSession((s) => ({
+        ...s,
+        pinnedContext: [combined, ...s.pinnedContext],
+      }));
+      sysMsg(`Loaded ${memories.length} memory file${memories.length > 1 ? 's' : ''}: ${memories.map((m) => path.basename(m.source)).join(', ')}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Compute filtered commands for picker
   const q = pickerQuery.toLowerCase();
@@ -87,9 +115,9 @@ export function App({ initialState }: AppProps): React.ReactElement {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
-  const addDisplay = useCallback((msg: Omit<DisplayMessage, 'id'>): string => {
+  const addDisplay = useCallback((msg: Omit<DisplayMessage, 'id' | 'timestamp'>): string => {
     const id = `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setDisplayMessages((prev) => [...prev, { ...msg, id }]);
+    setDisplayMessages((prev) => [...prev, { ...msg, id, timestamp: Date.now() }]);
     return id;
   }, []);
 
@@ -114,6 +142,31 @@ export function App({ initialState }: AppProps): React.ReactElement {
         },
       });
     });
+  }, []);
+
+  // ── Hooks runner ──────────────────────────────────────────────────────────────
+
+  const runHooks = useCallback(async (
+    event: 'PreToolUse' | 'PostToolUse' | 'Notification',
+    toolCall?: ToolCall,
+    output?: string,
+  ): Promise<void> => {
+    const hooks = hooksRef.current[event] ?? [];
+    for (const hook of hooks) {
+      if (hook.matcher && toolCall && !toolCall.name.includes(hook.matcher) && !new RegExp(hook.matcher).test(toolCall.name)) continue;
+      const env: Record<string, string> = {
+        ...(process.env as Record<string, string>),
+        LC_TOOL_NAME: toolCall?.name ?? '',
+        LC_TOOL_ARGS: toolCall ? JSON.stringify(toolCall.args) : '',
+        LC_TOOL_OUTPUT: output ?? '',
+        LC_TOOL_PATH: (toolCall?.args as any)?.path ?? (toolCall?.args as any)?.source ?? '',
+      };
+      try {
+        await new Promise<void>((resolve) => {
+          execFile('sh', ['-c', hook.command], { env, timeout: 10000 }, () => resolve());
+        });
+      } catch { /* hooks never block the agent */ }
+    }
   }, []);
 
   // ── Slash command handler ─────────────────────────────────────────────────────
@@ -223,12 +276,49 @@ export function App({ initialState }: AppProps): React.ReactElement {
         return;
       }
 
+      case '/review': {
+        setMood('thinking');
+        sysMsg('Running code review…');
+        try {
+          // Prefer staged diff, fall back to working tree diff
+          const staged = await new Promise<string>((res, rej) => {
+            execFile('git', ['diff', '--staged'], { cwd: session.workingDir }, (err, out) => err ? rej(err) : res(out));
+          });
+          const diff = staged.trim() || await new Promise<string>((res, rej) => {
+            execFile('git', ['diff', 'HEAD'], { cwd: session.workingDir }, (err, out) => err ? rej(err) : res(out));
+          });
+
+          if (!diff.trim()) {
+            sysMsg('No changes to review. Stage files or make edits first.', true);
+            setMood('idle');
+            return;
+          }
+
+          const prompt = `Do a thorough code review of this diff. Group findings by severity:\n🔴 Critical — bugs, security vulnerabilities, data loss risk\n🟡 Warning  — performance, missing error handling, anti-patterns\n🔵 Suggestion — style, readability, improvements\n\nBe specific with exact line references. If there are no issues in a category, skip it.\n\n\`\`\`diff\n${diff.slice(0, 8000)}\n\`\`\``;
+          const reviewId = addDisplay({ role: 'assistant', content: '', streaming: true });
+          let review = '';
+          await streamProvider(
+            session.provider, session.apiKeys, session.model,
+            [{ role: 'user', content: prompt }],
+            (chunk) => { if (chunk.text) { review += chunk.text; updateDisplay(reviewId, { content: review, streaming: true }); } },
+            session.systemPrompt,
+          );
+          updateDisplay(reviewId, { content: review, streaming: false });
+          setSession((s) => ({ ...s, lastAssistantMessage: review }));
+        } catch (err) {
+          sysMsg(`Review failed: ${err instanceof Error ? err.message : String(err)}`, true);
+          setMood('error');
+        }
+        setMood('idle');
+        return;
+      }
+
       case '/commit': {
         setMood('thinking');
         sysMsg('Generating commit message…');
         try {
           const stdout = await new Promise<string>((res, rej) => {
-            exec('git diff --staged', { cwd: session.workingDir }, (err, out) => {
+            execFile('git', ['diff', '--staged'], { cwd: session.workingDir }, (err, out) => {
               if (err) rej(err); else res(out);
             });
           });
@@ -249,8 +339,8 @@ export function App({ initialState }: AppProps): React.ReactElement {
           );
           commitMsg = commitMsg.trim().split('\n')[0];
           const fullMsg = `${commitMsg}\n\nCo-authored-by: Nyx <nyx@thealxlabs.ca>`;
-          exec(`git commit -m "${fullMsg.replace(/"/g, '\\"')}"`, { cwd: session.workingDir },
-            (err, out) => {
+          execFile('git', ['commit', '-m', fullMsg], { cwd: session.workingDir },
+            (err) => {
               if (err) { sysMsg(`Commit failed: ${err.message}`, true); setMood('error'); }
               else { sysMsg(`Committed: ${commitMsg}`); setMood('happy'); }
             },
@@ -269,7 +359,24 @@ export function App({ initialState }: AppProps): React.ReactElement {
           sysMsg('No files modified in this session.');
           return;
         }
-        sysMsg(`Files modified this session:\n${paths.map((p) => `  ± ${p}`).join('\n')}`);
+        if (args === '--list' || args === '-l') {
+          sysMsg(`Files modified this session:\n${paths.map((p) => `  ± ${p}`).join('\n')}`);
+          return;
+        }
+        // Show unified diffs for all (or specified) modified files
+        const target = args ? paths.filter((p) => p.includes(args)) : paths;
+        if (!target.length) {
+          sysMsg(`No modified files matching: ${args}`);
+          return;
+        }
+        for (const filePath of target) {
+          const diff = executorRef.current.unifiedDiff(filePath);
+          if (diff) {
+            sysMsg(diff.slice(0, 3000));
+          } else {
+            sysMsg(`  ${filePath}  (unchanged)`);
+          }
+        }
         return;
       }
 
@@ -298,8 +405,50 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/allowall': {
-        setSession((s) => ({ ...s, allowAllTools: !s.allowAllTools }));
-        sysMsg(`Tool permissions: ${!session.allowAllTools ? 'all allowed (no prompts)' : 'per-call prompts restored'}`);
+        // Cycle through modes: suggest → auto-edit → full-auto → suggest
+        setSession((s) => {
+          const current = s.approvalMode;
+          const next: ApprovalMode =
+            current === 'suggest' ? 'auto-edit' :
+            current === 'auto-edit' ? 'full-auto' : 'suggest';
+          sysMsg(`Approval mode: ${next}`);
+          return { ...s, approvalMode: next };
+        });
+        return;
+      }
+
+      case '/mode': {
+        if (!args) {
+          sysMsg(
+            `Current mode: ${session.approvalMode}\n\n` +
+            `  suggest    — prompt before every write, delete, shell, or git op\n` +
+            `  auto-edit  — file edits auto-approved; only shell needs approval\n` +
+            `  full-auto  — everything runs without prompting\n\n` +
+            `Usage: /mode <suggest|auto-edit|full-auto>`,
+          );
+          return;
+        }
+        if (!['suggest', 'auto-edit', 'full-auto'].includes(args)) {
+          sysMsg(`Unknown mode: ${args}. Options: suggest, auto-edit, full-auto`, true);
+          return;
+        }
+        setSession((s) => ({ ...s, approvalMode: args as ApprovalMode }));
+        sysMsg(`Approval mode set to: ${args}`);
+        return;
+      }
+
+      case '/steps': {
+        if (!args) {
+          sysMsg(`Max agent steps: ${session.maxSteps}\nUsage: /steps <number>  (default: 20)`);
+          return;
+        }
+        const n = parseInt(args, 10);
+        if (isNaN(n) || n < 1 || n > 200) {
+          sysMsg('Steps must be a number between 1 and 200.', true);
+          return;
+        }
+        setSession((s) => ({ ...s, maxSteps: n }));
+        sysMsg(`Max agent steps set to ${n}.`);
         return;
       }
 
@@ -340,7 +489,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
           `~Tokens   ${tokens.toLocaleString()}\n` +
           `Checkpts  ${cps}\n` +
           `CWD       ${session.workingDir}\n` +
-          `AllowAll  ${session.allowAllTools ? 'yes' : 'no'}`,
+          `Mode      ${session.approvalMode}`,
         );
         return;
       }
@@ -439,13 +588,24 @@ export function App({ initialState }: AppProps): React.ReactElement {
           return;
         }
         try {
-          // Use pbcopy on Mac, xclip/xsel on Linux
-          const clipCmd = process.platform === 'darwin'
-            ? `echo ${JSON.stringify(session.lastAssistantMessage)} | pbcopy`
-            : `echo ${JSON.stringify(session.lastAssistantMessage)} | xclip -selection clipboard 2>/dev/null || echo ${JSON.stringify(session.lastAssistantMessage)} | xsel --clipboard --input`;
-          await new Promise<void>((res, rej) => {
-            exec(clipCmd, (err) => err ? rej(err) : res());
-          });
+          // Pass content via stdin to avoid any shell expansion of the message content
+          const content = session.lastAssistantMessage;
+          if (process.platform === 'darwin') {
+            execFileSync('pbcopy', [], { input: content, encoding: 'utf8' });
+          } else if (process.platform === 'win32') {
+            execFileSync('clip', [], { input: content, encoding: 'utf8' });
+          } else {
+            // Linux — try xclip, then xsel, then wl-clipboard (Wayland)
+            try {
+              execFileSync('xclip', ['-selection', 'clipboard'], { input: content, encoding: 'utf8' });
+            } catch {
+              try {
+                execFileSync('xsel', ['--clipboard', '--input'], { input: content, encoding: 'utf8' });
+              } catch {
+                execFileSync('wl-copy', [], { input: content, encoding: 'utf8' });
+              }
+            }
+          }
           sysMsg(`Copied ${session.lastAssistantMessage.length} chars to clipboard.`);
         } catch {
           sysMsg('Clipboard not available. Here is the last response:\n\n' + session.lastAssistantMessage);
@@ -513,8 +673,20 @@ export function App({ initialState }: AppProps): React.ReactElement {
         setMood('thinking');
         try {
           const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(args)}`;
-          const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-          const text = await res.text();
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000);
+          let text: string;
+          try {
+            const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
+            if (!res.ok) {
+              sysMsg(`Web search failed: server returned ${res.status}`, true);
+              setMood('idle');
+              return;
+            }
+            text = await res.text();
+          } finally {
+            clearTimeout(timeoutId);
+          }
           // Extract visible text snippets from results
           const snippets = [...text.matchAll(/class="result__snippet"[^>]*>([^<]{20,300})</g)]
             .slice(0, 5)
@@ -538,7 +710,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       case '/open': {
         if (!args) { sysMsg('Usage: /open <file>'); return; }
         const editor = process.env.EDITOR || (process.platform === 'darwin' ? 'open' : 'xdg-open');
-        exec(`${editor} ${JSON.stringify(args)}`, { cwd: session.workingDir }, (err) => {
+        execFile(editor, [args], { cwd: session.workingDir }, (err) => {
           if (err) sysMsg(`Could not open: ${err.message}`, true);
           else sysMsg(`Opened ${args} in ${editor}`);
         });
@@ -566,6 +738,161 @@ export function App({ initialState }: AppProps): React.ReactElement {
           sysMsg(`Provider: ${provider.displayName} (free/local)\n~Tokens this session: ${tokens.toLocaleString()}\nNo cost estimate for local models.`);
         } else {
           sysMsg(`Provider: ${provider.displayName}\nModel: ${session.model}\n~Tokens this session: ${tokens.toLocaleString()}\nEstimated cost: $${cost.toFixed(6)} USD`);
+        }
+        return;
+      }
+
+      case '/init': {
+        sysMsg('Analyzing project…');
+        setMood('thinking');
+        try {
+          // Gather project signals
+          const signals: string[] = [];
+          const tryRead = (f: string) => { try { return fs.readFileSync(path.join(session.workingDir, f), 'utf8').slice(0, 500); } catch { return null; } };
+          const pkg     = tryRead('package.json');
+          const cargo   = tryRead('Cargo.toml');
+          const pyproj  = tryRead('pyproject.toml');
+          const gomod   = tryRead('go.mod');
+          const readme  = tryRead('README.md') ?? tryRead('README');
+          if (pkg)    signals.push(`package.json:\n${pkg}`);
+          if (cargo)  signals.push(`Cargo.toml:\n${cargo}`);
+          if (pyproj) signals.push(`pyproject.toml:\n${pyproj}`);
+          if (gomod)  signals.push(`go.mod:\n${gomod}`);
+          if (readme) signals.push(`README:\n${readme}`);
+
+          const dirResult = await executorRef.current.execute({ name: 'list_dir', args: { path: '.', recursive: true } });
+          signals.push(`Directory structure:\n${dirResult.output.slice(0, 1000)}`);
+
+          const prompt = `Generate a .nyx.md project configuration file for an AI coding assistant named Nyx.\n\nBased on this project info:\n${signals.join('\n\n')}\n\nThe .nyx.md should include:\n1. A brief description of what this project does\n2. Key technologies, frameworks, and conventions\n3. Important files and their purpose\n4. How to run tests and build\n5. Any gotchas or things the AI should know\n\nFormat it as clean markdown. Be concise and specific. This will be injected into every AI request.`;
+
+          const initId = addDisplay({ role: 'assistant', content: '', streaming: true });
+          let content = '';
+          await streamProvider(
+            session.provider, session.apiKeys, session.model,
+            [{ role: 'user', content: prompt }],
+            (chunk) => { if (chunk.text) { content += chunk.text; updateDisplay(initId, { content, streaming: true }); } },
+          );
+          updateDisplay(initId, { content, streaming: false });
+
+          const nyxMdPath = path.join(session.workingDir, '.nyx.md');
+          fs.writeFileSync(nyxMdPath, content.trim(), 'utf8');
+          sysMsg(`.nyx.md created at ${nyxMdPath}\nRestart or run /memory to reload.`);
+          setMood('happy');
+        } catch (err) {
+          sysMsg(`Init failed: ${err instanceof Error ? err.message : String(err)}`, true);
+          setMood('error');
+        }
+        return;
+      }
+
+      case '/doctor': {
+        setMood('thinking');
+        const checks: Array<{ label: string; status: string; ok: boolean }> = [];
+
+        // Node.js
+        checks.push({ label: 'Node.js', status: process.version, ok: true });
+
+        // Ollama
+        try {
+          const res = await fetch('http://localhost:11434/api/tags', { signal: AbortSignal.timeout(2000) });
+          if (res.ok) {
+            const data = await res.json() as { models: Array<{ name: string }> };
+            checks.push({ label: 'Ollama', status: `running — ${data.models.length} model${data.models.length !== 1 ? 's' : ''}`, ok: true });
+          } else {
+            checks.push({ label: 'Ollama', status: 'reachable but returned error', ok: false });
+          }
+        } catch {
+          checks.push({ label: 'Ollama', status: 'not running (start with: ollama serve)', ok: false });
+        }
+
+        // API keys
+        for (const [p, cfg] of Object.entries(PROVIDERS)) {
+          if (cfg.requiresKey) {
+            const has = !!session.apiKeys[p as Provider];
+            checks.push({ label: `${cfg.displayName} key`, status: has ? 'set' : 'missing — use /apikey', ok: has });
+          }
+        }
+
+        // Git
+        const gitCheck = await executorRef.current.execute({ name: 'git_operation', args: { args: 'rev-parse --git-dir' } });
+        checks.push({ label: 'Git repo', status: gitCheck.success ? 'yes' : 'not a git repo', ok: gitCheck.success });
+
+        // Memory files
+        const memories = loadNyxMemories(session.workingDir);
+        checks.push({ label: '.nyx.md memory', status: memories.length ? memories.map((m) => path.basename(path.dirname(m.source)) + '/' + path.basename(m.source)).join(', ') : 'none — use /init', ok: memories.length > 0 });
+
+        // MCP
+        const mcpSrv = mcpRef.current.getStatus();
+        checks.push({ label: 'MCP servers', status: mcpSrv.length ? mcpSrv.map((s) => `${s.name}(${s.connected ? '✓' : '✕'})`).join(' ') : 'none', ok: true });
+
+        // Hooks
+        const hookTotal = [...(hooksRef.current.PreToolUse ?? []), ...(hooksRef.current.PostToolUse ?? []), ...(hooksRef.current.Notification ?? [])].length;
+        checks.push({ label: 'Hooks', status: hookTotal ? `${hookTotal} configured` : 'none (optional)', ok: true });
+
+        const W = 22;
+        const out = checks.map((c) => `  ${c.ok ? '✓' : '✕'} ${c.label.padEnd(W)} ${c.status}`).join('\n');
+        sysMsg(`LocalCode Doctor\n\n${out}\n\nMode: ${session.approvalMode}  Steps: ${session.maxSteps}  Provider: ${PROVIDERS[session.provider].displayName}`);
+        setMood('idle');
+        return;
+      }
+
+      case '/memory': {
+        const subCmd = args.trim().toLowerCase();
+
+        if (subCmd === 'edit') {
+          const editor = process.env.EDITOR || (process.platform === 'darwin' ? 'nano' : 'nano');
+          const globalNyx = path.join(os.homedir(), '.nyx.md');
+          if (!fs.existsSync(globalNyx)) {
+            fs.writeFileSync(globalNyx, `# Nyx Global Memory\n\nAdd notes here that Nyx should always know about you.\n`, 'utf8');
+          }
+          execFile(editor, [globalNyx], (err) => {
+            if (err) sysMsg(`Could not open editor: ${err.message}`, true);
+            else sysMsg(`Saved. Restart LocalCode to reload memory.`);
+          });
+          sysMsg(`Opening ${globalNyx} in ${editor}…`);
+          return;
+        }
+
+        const memories = loadNyxMemories(session.workingDir);
+        const lines = [
+          'Memory files (.nyx.md hierarchy):',
+          '',
+          `  ${memories.find((m) => m.source.includes(os.homedir())) ? '✓' : '·'} Global   ${path.join(os.homedir(), '.nyx.md')}${memories.find((m) => m.source.includes(os.homedir())) ? '' : '  (not found)'}`,
+          `  ${memories.find((m) => m.source.includes(session.workingDir)) ? '✓' : '·'} Project  ${path.join(session.workingDir, '.nyx.md')}${memories.find((m) => m.source.includes(session.workingDir)) ? '' : '  (not found — use /init)'}`,
+          '',
+          `Pinned context items: ${session.pinnedContext.length}`,
+          '',
+          'Commands:',
+          '  /memory edit   — edit global ~/.nyx.md',
+          '  /init          — generate project .nyx.md from codebase',
+        ];
+        sysMsg(lines.join('\n'));
+        return;
+      }
+
+      case '/hooks': {
+        const hooksPath = path.join(os.homedir(), '.localcode', 'hooks.json');
+        const loaded = hooksRef.current;
+        const total = [...(loaded.PreToolUse ?? []), ...(loaded.PostToolUse ?? []), ...(loaded.Notification ?? [])].length;
+        if (!total) {
+          sysMsg(
+            `No hooks configured.\n\n` +
+            `Create ${hooksPath} to add hooks:\n` +
+            `{\n` +
+            `  "PreToolUse": [{ "matcher": "write_file", "command": "echo writing $LC_TOOL_PATH" }],\n` +
+            `  "PostToolUse": [{ "matcher": "write_file", "command": "prettier --write \\"$LC_TOOL_PATH\\" 2>/dev/null" }],\n` +
+            `  "Notification": [{ "command": "say done" }]\n` +
+            `}\n\n` +
+            `Env vars: LC_TOOL_NAME, LC_TOOL_ARGS, LC_TOOL_OUTPUT, LC_TOOL_PATH`,
+          );
+        } else {
+          const lines = [
+            `Hooks loaded from ${hooksPath}:`,
+            ...(loaded.PreToolUse ?? []).map((h) => `  PreToolUse   ${h.matcher ? `[${h.matcher}] ` : ''}→ ${h.command}`),
+            ...(loaded.PostToolUse ?? []).map((h) => `  PostToolUse  ${h.matcher ? `[${h.matcher}] ` : ''}→ ${h.command}`),
+            ...(loaded.Notification ?? []).map((h) => `  Notification → ${h.command}`),
+          ];
+          sysMsg(lines.join('\n'));
         }
         return;
       }
@@ -653,8 +980,69 @@ export function App({ initialState }: AppProps): React.ReactElement {
         return;
       }
 
+      case '/cd': {
+        if (!args) {
+          sysMsg(`Current working directory: ${session.workingDir}\nUsage: /cd <path>`);
+          return;
+        }
+        const newDir = path.isAbsolute(args) ? args : path.join(session.workingDir, args);
+        if (!fs.existsSync(newDir) || !fs.statSync(newDir).isDirectory()) {
+          sysMsg(`Not a directory: ${newDir}`, true);
+          return;
+        }
+        const resolved = path.resolve(newDir);
+        executorRef.current = new ToolExecutor(resolved);
+        setSession((s) => ({ ...s, workingDir: resolved }));
+        sysMsg(`Working directory → ${resolved}`);
+        return;
+      }
+
+      case '/ping': {
+        sysMsg(`Testing connection to ${PROVIDERS[session.provider].displayName}…`);
+        setMood('thinking');
+        try {
+          const startMs = Date.now();
+          await streamProvider(
+            session.provider,
+            session.apiKeys,
+            session.model,
+            [{ role: 'user', content: 'Reply with only: pong' }],
+            () => {},
+          );
+          const ms = Date.now() - startMs;
+          sysMsg(`✓ ${PROVIDERS[session.provider].displayName} responded in ${ms}ms  (model: ${session.model})`);
+          setMood('happy');
+        } catch (err) {
+          sysMsg(`✕ Connection failed: ${err instanceof Error ? err.message : String(err)}`, true);
+          setMood('error');
+        }
+        return;
+      }
+
+      case '/search': {
+        if (!args) { sysMsg('Usage: /search <pattern>  — search file contents in working dir'); return; }
+        sysMsg(`Searching for "${args}"…`);
+        const result = await executorRef.current.execute({ name: 'search_files', args: { pattern: args, path: '.' } });
+        sysMsg(result.success && result.output.trim() ? result.output : `No matches found for: ${args}`);
+        return;
+      }
+
+      case '/ls': {
+        const target = args || '.';
+        const result = await executorRef.current.execute({ name: 'list_dir', args: { path: target, recursive: false } });
+        sysMsg(result.success ? result.output : `Could not list: ${target}`);
+        return;
+      }
+
+      case '/find': {
+        if (!args) { sysMsg('Usage: /find <filename-pattern>  e.g. /find *.ts'); return; }
+        const result = await executorRef.current.execute({ name: 'find_files', args: { pattern: args } });
+        sysMsg(result.success && result.output.trim() ? result.output : `No files matching: ${args}`);
+        return;
+      }
+
       case '/exit': {
-        saveSession(session);
+        try { saveSession(session); } catch { /* exit regardless */ }
         exit();
         return;
       }
@@ -682,6 +1070,9 @@ export function App({ initialState }: AppProps): React.ReactElement {
       const result = await executorRef.current.execute({ name: 'read_file', args: { path: p } });
       if (result.success) {
         processedText = processedText.replace(match, `\n\`\`\`${p}\n${result.output}\n\`\`\``);
+      } else {
+        sysMsg(`@context warning: could not read "${p}" — ${result.output}`, true);
+        processedText = processedText.replace(match, `[file not found: ${p}]`);
       }
     }
 
@@ -701,7 +1092,11 @@ export function App({ initialState }: AppProps): React.ReactElement {
     streamingIdRef.current = streamId;
     let accumulated = '';
 
-    // We need the current session state
+    // Abort controller — cancelled by Escape key
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    // Snapshot session for this run
     const currentSession = session;
 
     const run = async (): Promise<void> => {
@@ -721,6 +1116,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
         currentSession.model,
         msgs,
         async (chunk: StreamChunk) => {
+          if (controller.signal.aborted) return;
           switch (chunk.type) {
             case 'agent_step':
               if ((chunk.step ?? 0) > 0) {
@@ -737,40 +1133,6 @@ export function App({ initialState }: AppProps): React.ReactElement {
               updateDisplay(streamId, { content: accumulated, streaming: true });
               break;
 
-            case 'tool_call': {
-              const toolCall = chunk.toolCall!;
-              updateDisplay(streamId, { content: accumulated, streaming: false });
-
-              const toolDisplayId = addDisplay({
-                role: 'tool',
-                content: `${toolCall.name}(${Object.entries(toolCall.args)
-                  .slice(0, 2)
-                  .map(([k, v]) => `${k}=${JSON.stringify(v).slice(0, 40)}`)
-                  .join(', ')})`,
-                toolName: toolCall.name,
-                streaming: true,
-              });
-
-              let allowed = currentSession.allowAllTools;
-              let allowAll = false;
-
-              if (!allowed && needsPermission(toolCall)) {
-                setMood('waiting');
-                const perm = await requestPermission(toolCall);
-                allowed = perm.allowed;
-                allowAll = perm.allowAll;
-                if (allowAll) setSession((s) => ({ ...s, allowAllTools: true }));
-                setMood('thinking');
-              } else {
-                allowed = true;
-              }
-
-              if (!allowed) {
-                updateDisplay(toolDisplayId, { content: `${toolCall.name} — denied`, streaming: false, isError: true });
-              }
-              break;
-            }
-
             case 'done':
               updateDisplay(streamId, { streaming: false });
               if (accumulated.trim()) {
@@ -778,9 +1140,9 @@ export function App({ initialState }: AppProps): React.ReactElement {
                 const outputTokens = Math.ceil(accumulated.length / 4);
                 const cost = estimateCost(currentSession.model, inputTokens, outputTokens);
                 setSession((s) => {
+                  // s.messages already contains userMsg (added before run() was called)
                   const newMessages = [
                     ...s.messages,
-                    userMsg,
                     { role: 'assistant' as const, content: accumulated },
                   ];
                   const shouldCheckpoint = s.autoCheckpoint && newMessages.length % 20 === 0;
@@ -794,13 +1156,16 @@ export function App({ initialState }: AppProps): React.ReactElement {
                       }]
                     : s.checkpoints;
                   if (shouldCheckpoint) setTimeout(() => sysMsg(`Auto-checkpoint saved.`), 100);
-                  return {
+                  const next = {
                     ...s,
                     messages: newMessages,
                     lastAssistantMessage: accumulated,
                     sessionCost: s.sessionCost + cost,
                     checkpoints,
                   };
+                  // Auto-save after every AI response
+                  setTimeout(() => { try { saveSession(next); } catch { /* non-critical */ } }, 0);
+                  return next;
                 });
               }
               break;
@@ -812,23 +1177,22 @@ export function App({ initialState }: AppProps): React.ReactElement {
           }
         },
         {
-          maxSteps: 20,
+          maxSteps: currentSession.maxSteps,
           tools: allTools,
           onToolCall: async (toolCall: ToolCall) => {
-            if (!currentSession.allowAllTools && needsPermission(toolCall)) {
+            if (needsApproval(toolCall, currentSession.approvalMode)) {
               setMood('waiting');
               const perm = await requestPermission(toolCall);
-              if (perm.allowAll) setSession((s) => ({ ...s, allowAllTools: true }));
+              if (perm.allowAll) setSession((s) => ({ ...s, approvalMode: 'full-auto' }));
               setMood('thinking');
               return perm;
             }
             return { allowed: true, allowAll: false };
           },
           onToolResult: (toolCall: ToolCall, output: string, diff?: unknown) => {
-            const isMcp = mcpRef.current.isMcpTool(toolCall.name);
             addDisplay({
               role: 'tool',
-              content: `${toolCall.name} → ${output.slice(0, 120)}`,
+              content: `${toolCall.name} → ${output.slice(0, 300)}`,
               toolName: toolCall.name,
               streaming: false,
             });
@@ -838,15 +1202,22 @@ export function App({ initialState }: AppProps): React.ReactElement {
             }
           },
           executeTool: async (toolCall: ToolCall) => {
-            // Route MCP tools to MCP manager, built-in tools to executor
+            await runHooks('PreToolUse', toolCall);
+
+            let result: { success: boolean; output: string };
             if (mcpRef.current.isMcpTool(toolCall.name)) {
-              const result = await mcpRef.current.callTool(toolCall.name, toolCall.args as Record<string, unknown>);
-              return { success: result.success, output: result.output };
+              const r = await mcpRef.current.callTool(toolCall.name, toolCall.args as Record<string, unknown>);
+              result = { success: r.success, output: r.output };
+            } else {
+              result = await executorRef.current.execute(toolCall);
             }
-            return executorRef.current.execute(toolCall);
+
+            await runHooks('PostToolUse', toolCall, result.output);
+            return result;
           },
         },
         currentSession.systemPrompt,
+        controller.signal,
       );
     };
 
@@ -862,8 +1233,9 @@ export function App({ initialState }: AppProps): React.ReactElement {
     } finally {
       setIsStreaming(false);
       setMood((m) => (m === 'thinking' || m === 'waiting' ? 'idle' : m));
+      runHooks('Notification');
     }
-  }, [isStreaming, session, addDisplay, updateDisplay, requestPermission]);
+  }, [isStreaming, session, addDisplay, updateDisplay, requestPermission, runHooks]);
 
   // ── Input handling ────────────────────────────────────────────────────────────
 
@@ -882,6 +1254,13 @@ export function App({ initialState }: AppProps): React.ReactElement {
   }, []);
 
   const handleSubmit = useCallback(async (val: string): Promise<void> => {
+    // If in multiline mode, Enter appends to buffer (don't submit)
+    if (isMultiline) {
+      setMultilineBuffer((prev) => [...prev, input]);
+      setInput('');
+      return;
+    }
+
     const v = val.trim();
     if (!v) return;
 
@@ -911,7 +1290,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
     }
 
     await sendMessage(v);
-  }, [showPicker, pickerQuery, pickerSelectedIndex, handleSlashCommand, sendMessage]);
+  }, [isMultiline, input, showPicker, pickerQuery, pickerSelectedIndex, handleSlashCommand, sendMessage]);
 
   useInput((inputChar, key) => {
     // Permission prompt input
@@ -920,6 +1299,47 @@ export function App({ initialState }: AppProps): React.ReactElement {
       else if (inputChar === 'a') pendingPermission.resolve(true, true);
       else if (inputChar === 'n') pendingPermission.resolve(false, false);
       return;
+    }
+
+    // Ctrl+E — toggle multiline mode
+    if (key.ctrl && inputChar === 'e' && !isStreaming && !pendingPermission) {
+      if (isMultiline) {
+        // Exit multiline, discard buffer
+        setIsMultiline(false);
+        setMultilineBuffer([]);
+        setInput('');
+        sysMsg('Multiline mode cancelled.');
+      } else {
+        setIsMultiline(true);
+        setMultilineBuffer([]);
+        sysMsg('Multiline mode — Enter adds line, Ctrl+D sends, Ctrl+E cancels.');
+      }
+      return;
+    }
+
+    // Ctrl+D in multiline — submit
+    if (key.ctrl && inputChar === 'd' && isMultiline && !isStreaming) {
+      const fullText = [...multilineBuffer, input].join('\n').trim();
+      if (fullText) {
+        setIsMultiline(false);
+        setMultilineBuffer([]);
+        setInput('');
+        sendMessage(fullText);
+      }
+      return;
+    }
+
+    // Escape — cancel streaming or close picker
+    if (key.escape) {
+      if (isStreaming) {
+        abortRef.current?.abort();
+        return;
+      }
+      if (showPicker) {
+        setShowPicker(false);
+        setInput('');
+        return;
+      }
     }
 
     // Picker navigation
@@ -936,11 +1356,6 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
       if (key.downArrow) {
         setPickerSelectedIndex((i) => Math.min(filtered.length - 1, i + 1));
-        return;
-      }
-      if (key.escape) {
-        setShowPicker(false);
-        setInput('');
         return;
       }
       if (key.return) {
@@ -971,7 +1386,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
     }
 
     if (key.ctrl && inputChar === 'c') {
-      saveSession(session);
+      try { saveSession(session); } catch { /* exit regardless */ }
       exit();
     }
   });
@@ -990,9 +1405,10 @@ export function App({ initialState }: AppProps): React.ReactElement {
         model={session.model}
         workingDir={session.workingDir}
         tokenCount={estimateTokens(session.messages)}
-        allowAll={session.allowAllTools}
+        approvalMode={session.approvalMode}
         persona={session.activePersona}
         sessionCost={session.sessionCost}
+        version={pkg.version}
       />
 
       {/* Message log — show last N messages */}
@@ -1024,14 +1440,28 @@ export function App({ initialState }: AppProps): React.ReactElement {
       {/* Input area */}
       <Box
         borderStyle="round"
-        borderColor={isStreaming ? 'gray' : 'yellowBright'}
+        borderColor={isStreaming ? 'gray' : isMultiline ? 'cyan' : 'yellowBright'}
         paddingX={1}
         flexDirection="row"
       >
-        <Text color={isStreaming ? 'gray' : 'yellowBright'}>
-          {isStreaming ? '⟳ ' : '❯ '}
+        <Text color={isStreaming ? 'gray' : isMultiline ? 'cyan' : 'yellowBright'}>
+          {isStreaming ? '⟳ ' : isMultiline ? '¶ ' : '❯ '}
         </Text>
-        {isStreaming ? (
+        {isMultiline ? (
+          <Box flexDirection="column">
+            {multilineBuffer.map((line, i) => (
+              <Box key={i} flexDirection="row">
+                <Text color="gray" dimColor>{String(i + 1).padStart(2, ' ')} │ </Text>
+                <Text color="white">{line}</Text>
+              </Box>
+            ))}
+            <Box flexDirection="row">
+              <Text color="gray" dimColor>{String(multilineBuffer.length + 1).padStart(2, ' ')} │ </Text>
+              <TextInput value={input} onChange={handleInputChange} onSubmit={handleSubmit} placeholder="…" />
+            </Box>
+            <Text color="gray" dimColor>  ctrl+d send  ctrl+e cancel</Text>
+          </Box>
+        ) : isStreaming ? (
           <Text color="gray" dimColor>Generating…</Text>
         ) : (
           <TextInput
@@ -1044,10 +1474,15 @@ export function App({ initialState }: AppProps): React.ReactElement {
       </Box>
 
       {/* Footer hint */}
-      <Box>
+      <Box flexDirection="row" justifyContent="space-between">
         <Text color="gray" dimColor>
-          {'  ctrl+c exit  / commands  @file context  ↑↓ history'}
+          {'  ctrl+c exit  esc cancel  ctrl+e multiline  / commands  @file context  ↑↓ history'}
         </Text>
+        {input.length > 50 && (
+          <Text color={input.length > 2000 ? 'yellow' : 'gray'} dimColor>
+            {`${input.length}c  `}
+          </Text>
+        )}
       </Box>
     </Box>
   );
@@ -1071,11 +1506,42 @@ function MessageRow({ msg }: { msg: DisplayMessage }): React.ReactElement {
   };
 
   const color = msg.isError ? 'red' : roleColors[msg.role] ?? 'white';
+  const icon = roleIcons[msg.role] ?? '  ';
+
+  // Render assistant messages with markdown
+  if (msg.role === 'assistant' && msg.content) {
+    return (
+      <Box flexDirection="row" marginBottom={0}>
+        <Text color="white">{icon}</Text>
+        <Box flexGrow={1} flexDirection="column">
+          <MarkdownText content={msg.content} streaming={msg.streaming} />
+        </Box>
+      </Box>
+    );
+  }
+
+  const timeStr = msg.timestamp
+    ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+    : null;
+
+  // Tool calls — show as compact inline box
+  if (msg.role === 'tool') {
+    return (
+      <Box flexDirection="row" marginBottom={0}>
+        <Text color="cyan" dimColor>{icon}</Text>
+        <Text color={msg.isError ? 'red' : 'cyan'} dimColor={!msg.isError}>
+          {msg.content}
+          {msg.streaming && <Text color="gray"> ▌</Text>}
+        </Text>
+        {timeStr && <Text color="gray" dimColor>  {timeStr}</Text>}
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="row" marginBottom={0}>
       <Text color={color} dimColor={msg.role === 'system'}>
-        {roleIcons[msg.role] ?? '  '}
+        {icon}
       </Text>
       <Box flexGrow={1} flexWrap="wrap">
         <Text color={color} dimColor={msg.role === 'system'}>
@@ -1083,6 +1549,7 @@ function MessageRow({ msg }: { msg: DisplayMessage }): React.ReactElement {
           {msg.streaming && <Text color="gray"> ▌</Text>}
         </Text>
       </Box>
+      {timeStr && msg.role === 'system' && <Text color="gray" dimColor>  {timeStr}</Text>}
     </Box>
   );
 }

@@ -8,7 +8,7 @@ export interface StreamChunk {
   text?: string;
   toolCall?: ToolCall;
   error?: string;
-  step?: number;       // which agent iteration
+  step?: number;
   maxSteps?: number;
 }
 
@@ -40,15 +40,36 @@ export const BUILTIN_TOOLS: ToolDef[] = [
   },
   {
     name: 'patch_file',
-    description: 'Replace a specific string in a file with new content',
+    description: 'Replace a specific string in a file with new content. old_str must be unique in the file.',
     parameters: {
       type: 'object',
       properties: {
         path: { type: 'string', description: 'File path to patch' },
-        old_str: { type: 'string', description: 'Exact string to replace' },
+        old_str: { type: 'string', description: 'Exact string to replace (must appear exactly once)' },
         new_str: { type: 'string', description: 'Replacement string' },
       },
       required: ['path', 'old_str', 'new_str'],
+    },
+  },
+  {
+    name: 'delete_file',
+    description: 'Delete a file',
+    parameters: {
+      type: 'object',
+      properties: { path: { type: 'string', description: 'File path to delete' } },
+      required: ['path'],
+    },
+  },
+  {
+    name: 'move_file',
+    description: 'Move or rename a file',
+    parameters: {
+      type: 'object',
+      properties: {
+        source: { type: 'string', description: 'Source file path' },
+        destination: { type: 'string', description: 'Destination file path' },
+      },
+      required: ['source', 'destination'],
     },
   },
   {
@@ -76,12 +97,37 @@ export const BUILTIN_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: 'search_files',
+    description: 'Search file contents using a regex or string pattern (like grep -rn). Excludes node_modules, .git, dist.',
+    parameters: {
+      type: 'object',
+      properties: {
+        pattern: { type: 'string', description: 'Search pattern (regex or string)' },
+        path: { type: 'string', description: 'Directory to search in (optional, defaults to working directory)' },
+        case_insensitive: { type: 'boolean', description: 'Case-insensitive search' },
+      },
+      required: ['pattern'],
+    },
+  },
+  {
+    name: 'find_files',
+    description: 'Find files by name pattern (like find -name). Supports wildcards e.g. "*.ts", "*.test.*"',
+    parameters: {
+      type: 'object',
+      properties: {
+        pattern: { type: 'string', description: 'Filename pattern with optional wildcards e.g. "*.ts"' },
+        path: { type: 'string', description: 'Directory to search in (optional)' },
+      },
+      required: ['pattern'],
+    },
+  },
+  {
     name: 'git_operation',
     description: 'Run a git command',
     parameters: {
       type: 'object',
       properties: {
-        args: { type: 'string', description: 'Git arguments (e.g. "status", "diff HEAD")' },
+        args: { type: 'string', description: 'Git arguments (e.g. "status", "diff HEAD", "log --oneline -10")' },
       },
       required: ['args'],
     },
@@ -97,8 +143,8 @@ export interface ToolDef {
 // ─── Agent loop config ────────────────────────────────────────────────────────
 
 export interface AgentConfig {
-  maxSteps: number;          // max tool-call iterations before stopping
-  tools: ToolDef[];          // merged built-in + MCP tools
+  maxSteps: number;
+  tools: ToolDef[];
   onToolCall: (toolCall: ToolCall, step: number) => Promise<{ allowed: boolean; allowAll: boolean }>;
   onToolResult: (toolCall: ToolCall, result: string, diff?: unknown) => void;
   executeTool: (toolCall: ToolCall) => Promise<{ success: boolean; output: string; diff?: unknown }>;
@@ -113,8 +159,8 @@ async function runOllamaAgent(
   onChunk: ChunkCallback,
   agentCfg: AgentConfig,
   systemPrompt?: string,
+  signal?: AbortSignal,
 ): Promise<void> {
-  // Build message list with system prompt
   const history: Array<{ role: string; content: string }> = [];
   if (systemPrompt) history.push({ role: 'system', content: systemPrompt });
   for (const m of messages) history.push({ role: m.role, content: m.content });
@@ -125,12 +171,14 @@ async function runOllamaAgent(
   }));
 
   for (let step = 0; step < agentCfg.maxSteps; step++) {
+    if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
     await onChunk({ type: 'agent_step', step, maxSteps: agentCfg.maxSteps });
 
     const res = await fetch(`${config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages: history, stream: true, tools }),
+      signal,
     });
 
     if (!res.ok || !res.body) {
@@ -145,6 +193,7 @@ async function runOllamaAgent(
     const toolCalls: ToolCall[] = [];
 
     while (true) {
+      if (signal?.aborted) { reader.cancel(); await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
@@ -156,10 +205,7 @@ async function runOllamaAgent(
           const obj = JSON.parse(line);
           const msg = obj.message;
           if (!msg) continue;
-          if (msg.content) {
-            assistantText += msg.content;
-            await onChunk({ type: 'text', text: msg.content });
-          }
+          if (msg.content) { assistantText += msg.content; await onChunk({ type: 'text', text: msg.content }); }
           if (msg.tool_calls) {
             for (const tc of msg.tool_calls) {
               toolCalls.push({ name: tc.function.name, args: tc.function.arguments ?? {} });
@@ -169,36 +215,23 @@ async function runOllamaAgent(
       }
     }
 
-    // Add assistant turn to history
     history.push({ role: 'assistant', content: assistantText });
+    if (!toolCalls.length) { await onChunk({ type: 'done' }); return; }
 
-    // No tool calls → agent is done
-    if (!toolCalls.length) {
-      await onChunk({ type: 'done' });
-      return;
-    }
-
-    // Execute tool calls
     for (const toolCall of toolCalls) {
+      if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
       const perm = await agentCfg.onToolCall(toolCall, step);
       if (!perm.allowed) {
         history.push({ role: 'tool', content: `Tool call denied by user: ${toolCall.name}` });
         continue;
       }
-
       const result = await agentCfg.executeTool(toolCall);
       agentCfg.onToolResult(toolCall, result.output, result.diff);
-
-      // Feed result back
-      history.push({
-        role: 'tool',
-        content: result.output.slice(0, 8000),
-      });
+      history.push({ role: 'tool', content: result.output.slice(0, 8000) });
     }
   }
 
-  // Hit max steps
-  await onChunk({ type: 'error', error: `Agent reached max steps (${agentCfg.maxSteps}). Use /agent --steps N to increase.` });
+  await onChunk({ type: 'error', error: `Agent reached max steps (${agentCfg.maxSteps}). Use /steps <n> to increase.` });
 }
 
 // ─── Claude agent ──────────────────────────────────────────────────────────────
@@ -210,6 +243,7 @@ async function runClaudeAgent(
   onChunk: ChunkCallback,
   agentCfg: AgentConfig,
   systemPrompt?: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (!config.apiKey) {
     await onChunk({ type: 'error', error: 'No Anthropic API key. Use /apikey sk-ant-...' });
@@ -222,7 +256,6 @@ async function runClaudeAgent(
     input_schema: t.parameters,
   }));
 
-  // Build proper Anthropic message format
   type AnthropicMsg = { role: 'user' | 'assistant'; content: string | unknown[] };
   const history: AnthropicMsg[] = messages.map((m) => ({
     role: m.role === 'assistant' ? 'assistant' : 'user',
@@ -230,6 +263,7 @@ async function runClaudeAgent(
   }));
 
   for (let step = 0; step < agentCfg.maxSteps; step++) {
+    if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
     await onChunk({ type: 'agent_step', step, maxSteps: agentCfg.maxSteps });
 
     const res = await fetch(`${config.baseUrl}/v1/messages`, {
@@ -247,6 +281,7 @@ async function runClaudeAgent(
         tools: claudeTools,
         stream: true,
       }),
+      signal,
     });
 
     if (!res.ok || !res.body) {
@@ -265,6 +300,7 @@ async function runClaudeAgent(
     let stopReason = '';
 
     while (true) {
+      if (signal?.aborted) { reader.cancel(); await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
@@ -299,7 +335,6 @@ async function runClaudeAgent(
       }
     }
 
-    // Build assistant message content for history
     const assistantContent: unknown[] = [];
     if (assistantText) assistantContent.push({ type: 'text', text: assistantText });
     for (const tu of toolUses) {
@@ -311,15 +346,11 @@ async function runClaudeAgent(
     }
     history.push({ role: 'assistant', content: assistantContent });
 
-    // No tool calls or end_turn → done
-    if (!toolUses.length || stopReason === 'end_turn') {
-      await onChunk({ type: 'done' });
-      return;
-    }
+    if (!toolUses.length || stopReason === 'end_turn') { await onChunk({ type: 'done' }); return; }
 
-    // Execute tools, build tool_result message
     const toolResults: unknown[] = [];
     for (const tu of toolUses) {
+      if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
       let parsedInput: Record<string, unknown> = {};
       try { parsedInput = JSON.parse(tu.input || '{}'); } catch { /* ok */ }
 
@@ -333,11 +364,7 @@ async function runClaudeAgent(
         resultContent = result.output.slice(0, 8000);
       }
 
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: tu.id,
-        content: resultContent,
-      });
+      toolResults.push({ type: 'tool_result', tool_use_id: tu.id, content: resultContent });
     }
 
     history.push({ role: 'user', content: toolResults });
@@ -357,6 +384,7 @@ async function runOpenAIAgent(
   agentCfg: AgentConfig,
   providerName: string,
   systemPrompt?: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   if (!apiKey) {
     await onChunk({ type: 'error', error: `No ${providerName} API key. Use /apikey ...` });
@@ -374,12 +402,14 @@ async function runOpenAIAgent(
   for (const m of messages) history.push({ role: m.role, content: m.content });
 
   for (let step = 0; step < agentCfg.maxSteps; step++) {
+    if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
     await onChunk({ type: 'agent_step', step, maxSteps: agentCfg.maxSteps });
 
     const res = await fetch(`${baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({ model, messages: history, tools: oaiTools, tool_choice: 'auto', stream: true }),
+      signal,
     });
 
     if (!res.ok || !res.body) {
@@ -395,6 +425,7 @@ async function runOpenAIAgent(
     let finishReason = '';
 
     while (true) {
+      if (signal?.aborted) { reader.cancel(); await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
       const { done, value } = await reader.read();
       if (done) break;
       buf += decoder.decode(value, { stream: true });
@@ -409,10 +440,7 @@ async function runOpenAIAgent(
           const delta = ev.choices?.[0]?.delta;
           finishReason = ev.choices?.[0]?.finish_reason ?? finishReason;
           if (!delta) continue;
-          if (delta.content) {
-            assistantText += delta.content;
-            await onChunk({ type: 'text', text: delta.content });
-          }
+          if (delta.content) { assistantText += delta.content; await onChunk({ type: 'text', text: delta.content }); }
           if (delta.tool_calls) {
             for (const tc of delta.tool_calls) {
               const idx = tc.index ?? 0;
@@ -427,8 +455,6 @@ async function runOpenAIAgent(
     }
 
     const toolCalls = Object.values(tcAccum);
-
-    // Add assistant message to history
     const assistantMsg: OAIMsg = { role: 'assistant', content: assistantText || null };
     if (toolCalls.length) {
       assistantMsg.tool_calls = toolCalls.map((tc) => ({
@@ -439,14 +465,10 @@ async function runOpenAIAgent(
     }
     history.push(assistantMsg);
 
-    // No tool calls → done
-    if (!toolCalls.length || finishReason === 'stop') {
-      await onChunk({ type: 'done' });
-      return;
-    }
+    if (!toolCalls.length || finishReason === 'stop') { await onChunk({ type: 'done' }); return; }
 
-    // Execute tools
     for (const tc of toolCalls) {
+      if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
       let args: Record<string, unknown> = {};
       try { args = JSON.parse(tc.args || '{}'); } catch { /* ok */ }
 
@@ -477,22 +499,22 @@ export async function runAgent(
   onChunk: ChunkCallback,
   agentCfg: AgentConfig,
   systemPrompt?: string,
+  signal?: AbortSignal,
 ): Promise<void> {
   const config = { ...PROVIDERS[provider], apiKey: apiKeys[provider] };
 
   switch (provider) {
     case 'ollama':
-      return runOllamaAgent(config, model, messages, onChunk, agentCfg, systemPrompt);
+      return runOllamaAgent(config, model, messages, onChunk, agentCfg, systemPrompt, signal);
     case 'claude':
-      return runClaudeAgent(config, model, messages, onChunk, agentCfg, systemPrompt);
+      return runClaudeAgent(config, model, messages, onChunk, agentCfg, systemPrompt, signal);
     case 'openai':
-      return runOpenAIAgent(config.baseUrl, config.apiKey ?? '', model, messages, onChunk, agentCfg, 'OpenAI', systemPrompt);
+      return runOpenAIAgent(config.baseUrl, config.apiKey ?? '', model, messages, onChunk, agentCfg, 'OpenAI', systemPrompt, signal);
     case 'groq':
-      return runOpenAIAgent(config.baseUrl, config.apiKey ?? '', model, messages, onChunk, agentCfg, 'Groq', systemPrompt);
+      return runOpenAIAgent(config.baseUrl, config.apiKey ?? '', model, messages, onChunk, agentCfg, 'Groq', systemPrompt, signal);
   }
 }
 
-// Keep streamProvider as a simple single-turn wrapper (for /compact, /commit etc)
 export async function streamProvider(
   provider: Provider,
   apiKeys: Partial<Record<Provider, string>>,
@@ -522,16 +544,23 @@ export async function streamProvider(
 
 const COST_PER_1M: Partial<Record<string, { in: number; out: number }>> = {
   'claude-sonnet-4-5':       { in: 3,    out: 15   },
+  'claude-sonnet-4-6':       { in: 3,    out: 15   },
   'claude-opus-4-5':         { in: 15,   out: 75   },
+  'claude-opus-4-6':         { in: 15,   out: 75   },
   'claude-haiku-4-5':        { in: 0.25, out: 1.25 },
+  'claude-haiku-4-5-20251001': { in: 0.25, out: 1.25 },
   'gpt-4o':                  { in: 2.5,  out: 10   },
   'gpt-4o-mini':             { in: 0.15, out: 0.6  },
+  'gpt-4.1':                 { in: 2.0,  out: 8.0  },
+  'gpt-4.1-mini':            { in: 0.4,  out: 1.6  },
   'llama-3.3-70b-versatile': { in: 0.59, out: 0.79 },
   'mixtral-8x7b-32768':      { in: 0.24, out: 0.24 },
 };
 
 export function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
-  const rates = COST_PER_1M[model];
+  // Try exact match first, then prefix match (e.g. "claude-sonnet-4-5" matches "claude-sonnet-4-5-20251022")
+  const rates = COST_PER_1M[model]
+    ?? Object.entries(COST_PER_1M).find(([k]) => model.startsWith(k))?.[1];
   if (!rates) return 0;
   return (inputTokens / 1_000_000) * rates.in + (outputTokens / 1_000_000) * rates.out;
 }
@@ -555,7 +584,7 @@ export async function listModels(
       });
       if (!res.ok) return [];
       const data = await res.json() as { data: Array<{ id: string }> };
-      return data.data.map((m) => m.id).filter((id) => id.startsWith('gpt')).sort();
+      return data.data.map((m) => m.id).filter((id) => id.startsWith('gpt') || id.startsWith('o1') || id.startsWith('o3')).sort();
     }
     if (provider === 'groq') {
       const key = apiKeys.groq;
@@ -568,7 +597,7 @@ export async function listModels(
       return data.data.map((m) => m.id).sort();
     }
     if (provider === 'claude') {
-      return ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5-20251001'];
+      return ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5-20251001'];
     }
     return [];
   } catch {
