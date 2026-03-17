@@ -1,0 +1,110 @@
+{
+  "name": "localcode-vscode",
+  "displayName": "LocalCode — Nyx AI",
+  "description": "AI coding assistant in your terminal. Powered by Ollama, Claude, OpenAI, or Groq.",
+  "version": "1.0.0",
+  "publisher": "thealxlabs",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["AI", "Other"],
+  "keywords": ["ai", "ollama", "claude", "coding", "assistant", "localcode"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thealxlabs/localcode.git"
+  },
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "localcode.open",
+        "title": "Open",
+        "category": "LocalCode"
+      },
+      {
+        "command": "localcode.askAboutSelection",
+        "title": "Ask Nyx about selection",
+        "category": "LocalCode"
+      },
+      {
+        "command": "localcode.askAboutFile",
+        "title": "Ask Nyx about this file",
+        "category": "LocalCode"
+      },
+      {
+        "command": "localcode.explainSelection",
+        "title": "Explain with Nyx",
+        "category": "LocalCode"
+      },
+      {
+        "command": "localcode.reviewChanges",
+        "title": "Review changes",
+        "category": "LocalCode"
+      },
+      {
+        "command": "localcode.runTests",
+        "title": "Run tests with Nyx",
+        "category": "LocalCode"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "localcode.open",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "localcode.askAboutSelection",
+          "when": "editorHasSelection",
+          "group": "localcode@1"
+        },
+        {
+          "command": "localcode.explainSelection",
+          "when": "editorHasSelection",
+          "group": "localcode@2"
+        },
+        {
+          "command": "localcode.askAboutFile",
+          "when": "editorIsOpen",
+          "group": "localcode@3"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "localcode.askAboutFile",
+          "when": "!explorerResourceIsFolder",
+          "group": "localcode@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LocalCode",
+      "properties": {
+        "localcode.command": {
+          "type": "string",
+          "default": "localcode",
+          "description": "Command to run LocalCode (default: localcode). Only used when useNpx is false."
+        },
+        "localcode.useNpx": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use npx @localcode/cli instead of a globally installed localcode command."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  }
+}
