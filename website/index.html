@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LocalCode — Terminal AI by TheAlxLabs</title>
-  <meta name="description" content="A terminal AI coding assistant powered by Ollama, Claude, OpenAI, or Groq. Built by TheAlxLabs, co-piloted by Nyx."/>
+  <title>LocalCode — Local-first AI Coding Assistant</title>
+  <meta name="description" content="LocalCode v3.1.0 — a terminal AI coding assistant. Free with Ollama. Multi-provider. 30+ commands. Open source MIT. Built by TheAlxLabs, co-piloted by Nyx."/>
+  <meta property="og:title" content="LocalCode — Local-first AI Coding Assistant"/>
+  <meta property="og:description" content="Free with Ollama. Multi-provider. 30+ slash commands. Open source MIT."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
@@ -12,209 +14,250 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
       --black:#080808;--yellow:#e8ff47;--white:#f0f0ee;
-      --gray:#444;--gray2:#1e1e1e;--gray3:#141414;
-      --cyan:#47ffe8;--red:#ff4747;--green:#47ff8a;
+      --gray:#444;--gray2:#1e1e1e;--gray3:#0f0f0f;--gray4:#141414;
+      --cyan:#47ffe8;--red:#ff4747;--green:#47ff8a;--purple:#a855f7;
       --mono:'Space Mono',monospace;--sans:'Syne',sans-serif;
+      --glow-y:0 0 20px rgba(232,255,71,.25);
+      --glow-c:0 0 20px rgba(71,255,232,.25);
     }
     html{scroll-behavior:smooth}
     body{background:var(--black);color:var(--white);font-family:var(--mono);overflow-x:hidden;cursor:crosshair}
     ::selection{background:var(--yellow);color:var(--black)}
 
     /* scanlines */
-    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:9999}
+    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:9999}
+
+    /* scanbeam */
+    .scanbeam{position:fixed;left:0;right:0;height:140px;background:linear-gradient(transparent,rgba(232,255,71,.018),transparent);pointer-events:none;z-index:9997;animation:scanbeam 12s linear infinite}
+    @keyframes scanbeam{from{top:-140px}to{top:100vh}}
 
     /* ── NAV ── */
-    nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;justify-content:space-between;align-items:center;padding:1.1rem 2.5rem;border-bottom:1px solid var(--gray2);background:rgba(8,8,8,0.92);backdrop-filter:blur(12px)}
-    .nav-logo{font-family:var(--sans);font-weight:800;font-size:1rem;color:var(--yellow);text-decoration:none;letter-spacing:-0.02em}
-    .nav-logo span{color:var(--white)}
-    .nav-links{display:flex;gap:2rem;list-style:none;align-items:center}
-    .nav-links a{color:#555;text-decoration:none;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;transition:color .2s}
+    nav{position:fixed;top:0;left:0;right:0;z-index:500;display:flex;justify-content:space-between;align-items:center;padding:1rem 2.5rem;border-bottom:1px solid #111;background:rgba(8,8,8,.94);backdrop-filter:blur(16px);transition:border-color .3s}
+    nav.scrolled{border-bottom-color:var(--gray2)}
+    .nav-logo{font-family:var(--sans);font-weight:800;font-size:.95rem;color:var(--yellow);text-decoration:none;letter-spacing:-.02em;display:flex;align-items:center;gap:.5rem}
+    .nav-logo-cat{color:var(--white);font-family:var(--mono);font-size:.75rem}
+    .nav-links{display:flex;gap:1.8rem;list-style:none;align-items:center}
+    .nav-links a{color:#4a4a4a;text-decoration:none;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;transition:color .2s}
     .nav-links a:hover{color:var(--yellow)}
-    .nav-cta{background:var(--yellow)!important;color:var(--black)!important;padding:.35rem 1rem;font-weight:700;transition:background .2s,transform .1s!important}
+    .nav-cta{background:var(--yellow)!important;color:var(--black)!important;padding:.3rem 1rem;font-weight:700;transition:background .2s,transform .1s!important;letter-spacing:.08em!important}
     .nav-cta:hover{background:#fff!important;transform:translateY(-1px)}
-
-    /* ── SCANLINE BEAM ── */
-    .scanbeam{position:fixed;left:0;right:0;height:120px;background:linear-gradient(transparent,rgba(232,255,71,.025),transparent);pointer-events:none;z-index:9997;animation:scanbeam 9s linear infinite}
-    @keyframes scanbeam{from{top:-120px}to{top:100vh}}
+    .nav-ver{font-size:.58rem;color:#2a2a2a;letter-spacing:.1em;margin-left:-.5rem}
 
     /* ── HERO ── */
-    #hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:7rem 2.5rem 4rem;gap:5rem;position:relative;overflow:hidden}
-    .hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(232,255,71,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(232,255,71,.025) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 20%,transparent 75%)}
+    #hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:7rem 2.5rem 4rem;gap:4rem;position:relative;overflow:hidden;max-width:1400px;margin:0 auto}
+    .hero-grid{position:fixed;inset:0;background-image:linear-gradient(rgba(232,255,71,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(232,255,71,.018) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 70% 70% at 50% 40%,black 10%,transparent 70%);pointer-events:none;z-index:0}
     .hero-left{position:relative;z-index:1}
-    .hero-tag{display:inline-flex;align-items:center;gap:.5rem;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;color:var(--yellow);border:1px solid rgba(232,255,71,.25);padding:.3rem .8rem;margin-bottom:1.6rem;opacity:0;transform:translateY(8px);animation:fadeUp .5s .1s forwards}
-    .hero-tag::before{content:'◈'}
-    h1{font-family:var(--sans);font-size:clamp(3rem,5.5vw,5.2rem);font-weight:800;line-height:.95;letter-spacing:-.03em;margin-bottom:1.5rem;opacity:0;transform:translateY(16px);animation:fadeUp .6s .25s forwards}
+    .hero-tag{display:inline-flex;align-items:center;gap:.5rem;font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--yellow);border:1px solid rgba(232,255,71,.22);padding:.28rem .8rem;margin-bottom:1.5rem;opacity:0;transform:translateY(8px);animation:fadeUp .5s .1s forwards}
+    .hero-tag-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+    h1{font-family:var(--sans);font-size:clamp(2.8rem,5.2vw,5rem);font-weight:800;line-height:.93;letter-spacing:-.035em;margin-bottom:1.4rem;opacity:0;transform:translateY(16px);animation:fadeUp .6s .22s forwards}
     h1 .acc{color:var(--yellow)}
-    h1 .dim{color:#2a2a2a}
-    .hero-desc{font-size:.85rem;line-height:1.9;color:#666;max-width:400px;margin-bottom:2.5rem;opacity:0;transform:translateY(16px);animation:fadeUp .6s .35s forwards}
-    .hero-actions{display:flex;gap:1rem;flex-wrap:wrap;opacity:0;transform:translateY(16px);animation:fadeUp .6s .45s forwards}
-    .hero-stats{display:flex;gap:2rem;margin-top:2.5rem;opacity:0;animation:fadeUp .6s .6s forwards}
-    .hero-stat .num{font-family:var(--sans);font-size:1.6rem;font-weight:800;color:var(--yellow)}
-    .hero-stat .lbl{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:#444;margin-top:.1rem}
+    h1 .dim{color:#1e1e1e}
+    h1 .acc2{color:var(--cyan)}
+    .hero-desc{font-size:.82rem;line-height:2;color:#555;max-width:420px;margin-bottom:2.2rem;opacity:0;transform:translateY(16px);animation:fadeUp .6s .34s forwards}
+    .hero-desc strong{color:var(--white)}
+    .hero-actions{display:flex;gap:.9rem;flex-wrap:wrap;opacity:0;transform:translateY(16px);animation:fadeUp .6s .44s forwards;margin-bottom:2.8rem}
+    .hero-stats{display:flex;gap:2.5rem;opacity:0;animation:fadeUp .6s .58s forwards;padding-top:2rem;border-top:1px solid #141414}
+    .hero-stat .num{font-family:var(--sans);font-size:1.8rem;font-weight:800;color:var(--yellow);line-height:1}
+    .hero-stat .lbl{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:#333;margin-top:.2rem}
 
-    /* btns */
-    .btn-p{background:var(--yellow);color:var(--black);font-family:var(--mono);font-size:.8rem;font-weight:700;padding:.75rem 1.6rem;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .12s,box-shadow .2s;position:relative}
-    .btn-p:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 rgba(232,255,71,.3)}
-    .btn-s{background:transparent;color:var(--white);font-family:var(--mono);font-size:.8rem;padding:.75rem 1.6rem;border:1px solid #2a2a2a;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:border-color .2s,color .2s,transform .12s}
+    /* buttons */
+    .btn-p{background:var(--yellow);color:var(--black);font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.7rem 1.5rem;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:transform .12s,box-shadow .2s}
+    .btn-p:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 rgba(232,255,71,.35)}
+    .btn-s{background:transparent;color:var(--white);font-family:var(--mono);font-size:.78rem;padding:.7rem 1.5rem;border:1px solid #222;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;transition:border-color .2s,color .2s,transform .12s}
     .btn-s:hover{border-color:var(--yellow);color:var(--yellow);transform:translate(-2px,-2px)}
 
-    /* ── TERMINAL ── */
-    .hero-right{position:relative;z-index:1;opacity:0;transform:translateX(24px);animation:fadeLeft .7s .5s forwards}
-    .terminal{background:#0b0b0b;border:1px solid #1a1a1a;position:relative;box-shadow:0 0 0 1px rgba(232,255,71,.04),0 48px 96px rgba(0,0,0,.9)}
-    .terminal::before{content:'';position:absolute;inset:-1px;background:linear-gradient(135deg,rgba(232,255,71,.12),transparent 45%);pointer-events:none;z-index:0;border-radius:inherit}
-    .tbar{background:#111;padding:.55rem 1rem;display:flex;align-items:center;gap:.45rem;border-bottom:1px solid #181818;position:relative;z-index:1}
-    .tdot{width:9px;height:9px;border-radius:50%}
+    /* ── HERO TERMINAL ── */
+    .hero-right{position:relative;z-index:1;opacity:0;transform:translateX(20px);animation:fadeLeft .7s .48s forwards}
+    .terminal{background:#060606;border:1px solid #161616;position:relative;box-shadow:0 0 0 1px rgba(232,255,71,.04),0 40px 80px rgba(0,0,0,.95)}
+    .terminal::before{content:'';position:absolute;inset:-1px;background:linear-gradient(135deg,rgba(232,255,71,.1),transparent 40%,rgba(71,255,232,.04) 100%);pointer-events:none;z-index:0}
+    .tbar{background:#0d0d0d;padding:.5rem .9rem;display:flex;align-items:center;gap:.4rem;border-bottom:1px solid #161616;position:relative;z-index:1}
+    .tdot{width:8px;height:8px;border-radius:50%}
     .tdot:nth-child(1){background:#ff5f57}.tdot:nth-child(2){background:#febc2e}.tdot:nth-child(3){background:#28c840}
-    .ttitle{margin-left:auto;margin-right:auto;font-size:.62rem;color:#3a3a3a;letter-spacing:.05em}
-    .tbody{padding:1.1rem 1.4rem;position:relative;z-index:1;font-size:.75rem;line-height:1.75;min-height:320px}
-    .trow{display:flex;gap:.6rem;min-height:1.3em}
-    .tnyx-header{display:flex;gap:1.2rem;margin-bottom:.7rem;padding-bottom:.7rem;border-bottom:1px solid #181818}
-    .tnyx-art{white-space:pre;line-height:1.35;color:var(--yellow);font-size:.8rem}
-    .tnyx-info{display:flex;flex-direction:column;justify-content:center;gap:.05rem;font-size:.73rem}
-    .ty{color:var(--yellow)} .tc{color:var(--cyan)} .tg{color:#3a3a3a} .tw{color:var(--white)} .tr{color:var(--red)} .tgr{color:var(--green)}
-    .cursor{display:inline-block;width:7px;height:.9em;background:var(--yellow);vertical-align:text-bottom;animation:blink 1s step-end infinite}
+    .ttitle{margin-left:auto;margin-right:auto;font-size:.6rem;color:#2e2e2e;letter-spacing:.06em}
+    .tbody{padding:1rem 1.2rem;position:relative;z-index:1;font-size:.72rem;line-height:1.8;min-height:340px;max-height:340px;overflow:hidden}
+    .trow{display:flex;gap:.5rem;min-height:1.3em;flex-wrap:wrap}
+    .tnyx-header{display:flex;gap:1rem;margin-bottom:.6rem;padding-bottom:.6rem;border-bottom:1px solid #131313}
+    .tnyx-art{white-space:pre;line-height:1.3;color:var(--yellow);font-size:.78rem;flex-shrink:0}
+    .tnyx-info{display:flex;flex-direction:column;justify-content:center;gap:.05rem;font-size:.68rem}
+    .ty{color:var(--yellow)}.tc{color:var(--cyan)}.tg{color:#2e2e2e}.tw{color:var(--white)}.tr{color:var(--red)}.tgr{color:var(--green)}.tpu{color:var(--purple)}
+    .cursor{display:inline-block;width:6px;height:.85em;background:var(--yellow);vertical-align:text-bottom;animation:blink 1s step-end infinite}
     @keyframes blink{50%{opacity:0}}
-    .tperm{background:rgba(232,255,71,.04);border-left:2px solid var(--yellow);padding:.45rem .75rem;margin:.4rem 0;font-size:.7rem}
-    .tpicker{background:#0f0f0f;border:1px solid #222;padding:.7rem .9rem;margin-top:.3rem}
-    .tpicker-hdr{color:#333;font-size:.62rem;margin-bottom:.3rem}
-    .tprow{display:flex;gap:.7rem;padding:.15rem 0;font-size:.72rem}
-    .tprow.sel .tpcmd{color:var(--yellow)}.tprow.sel .tparr{color:var(--yellow)}.tprow.sel .tpdesc{color:var(--white)}
-    .tpcmd{color:var(--cyan);width:96px;flex-shrink:0}.tparr{color:#2a2a2a;width:14px}.tpdesc{color:#3a3a3a}
-    .tdiff{background:#0f0f0f;border:1px solid #1a1a1a;padding:.5rem .8rem;margin:.3rem 0;font-size:.68rem}
-    .tdiff-hdr{color:#444;margin-bottom:.3rem;font-size:.62rem}
-    .tdiff-line{display:flex;gap:.5rem}
-    .tdiff-add{color:var(--green)}.tdiff-del{color:var(--red)}.tdiff-ctx{color:#333}
-
-    /* replay btn */
-    .replay-btn{position:absolute;bottom:.8rem;right:.8rem;background:transparent;border:1px solid #252525;color:#333;font-family:var(--mono);font-size:.6rem;padding:.25rem .6rem;cursor:pointer;transition:all .2s;z-index:2}
+    .tperm{background:rgba(232,255,71,.03);border-left:2px solid var(--yellow);padding:.4rem .7rem;margin:.35rem 0;font-size:.68rem}
+    .tdiff{background:#0a0a0a;border:1px solid #181818;padding:.45rem .75rem;margin:.25rem 0;font-size:.66rem}
+    .tdiff-hdr{color:#333;margin-bottom:.25rem;font-size:.6rem}
+    .tdiff-add{color:var(--green)}.tdiff-del{color:var(--red)}.tdiff-ctx{color:#2a2a2a}
+    .tinfo-block{background:#0a0a0a;border:1px solid #181818;padding:.4rem .7rem;margin:.25rem 0;font-size:.66rem;color:#444}
+    .replay-btn{position:absolute;bottom:.7rem;right:.7rem;background:transparent;border:1px solid #222;color:#333;font-family:var(--mono);font-size:.58rem;padding:.22rem .55rem;cursor:pointer;transition:all .2s;z-index:2}
     .replay-btn:hover{border-color:var(--yellow);color:var(--yellow)}
 
     /* ── TICKER ── */
-    .ticker-wrap{overflow:hidden;border-top:1px solid var(--gray2);border-bottom:1px solid var(--gray2);padding:.55rem 0;background:rgba(232,255,71,.015)}
-    .ticker{display:flex;gap:3rem;width:max-content;animation:ticker 22s linear infinite}
-    .ticker-item{white-space:nowrap;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:#333;display:flex;align-items:center;gap:.7rem}
-    .ticker-item::before{content:'◈';color:var(--yellow)}
+    .ticker-wrap{overflow:hidden;border-top:1px solid #0f0f0f;border-bottom:1px solid #0f0f0f;padding:.5rem 0;background:rgba(232,255,71,.008)}
+    .ticker{display:flex;gap:3rem;width:max-content;animation:ticker 28s linear infinite}
+    .ticker:hover{animation-play-state:paused}
+    .ticker-item{white-space:nowrap;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#252525;display:flex;align-items:center;gap:.6rem}
+    .ticker-item::before{content:'◈';color:var(--yellow);opacity:.5}
     @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 
     /* ── SECTION BASE ── */
     .section-wrap{padding:6rem 2.5rem;max-width:1200px;margin:0 auto}
-    .section-label{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--yellow);margin-bottom:.7rem;display:flex;align-items:center;gap:.5rem}
-    .section-label::before{content:'//';color:#333}
-    h2{font-family:var(--sans);font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-.025em;line-height:1.05;margin-bottom:.8rem}
-    .section-sub{color:#555;font-size:.82rem;line-height:1.85;max-width:480px;margin-bottom:3rem}
+    .section-label{font-size:.6rem;letter-spacing:.22em;text-transform:uppercase;color:var(--yellow);margin-bottom:.6rem;display:flex;align-items:center;gap:.5rem}
+    .section-label::before{content:'//';color:#252525}
+    h2{font-family:var(--sans);font-size:clamp(1.9rem,3.8vw,2.9rem);font-weight:800;letter-spacing:-.025em;line-height:1.05;margin-bottom:.7rem}
+    .section-sub{color:#444;font-size:.8rem;line-height:1.9;max-width:500px;margin-bottom:3rem}
 
-    /* ── HOW IT WORKS ── */
-    #how{background:var(--gray3);border-top:1px solid var(--gray2);border-bottom:1px solid var(--gray2)}
-    .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--gray2);margin-top:3rem}
-    .step{padding:2rem 1.5rem;border-right:1px solid var(--gray2);position:relative;overflow:hidden;transition:background .3s}
-    .step:last-child{border-right:none}
-    .step:hover{background:rgba(232,255,71,.02)}
-    .step-num{font-family:var(--sans);font-size:3rem;font-weight:800;color:#181818;line-height:1;margin-bottom:.8rem;transition:color .3s}
-    .step:hover .step-num{color:rgba(232,255,71,.12)}
-    .step h3{font-family:var(--sans);font-size:.95rem;font-weight:700;margin-bottom:.4rem;color:var(--white)}
-    .step p{font-size:.72rem;line-height:1.8;color:#444}
-    .step-icon{font-size:1.2rem;margin-bottom:.6rem}
-    .step::after{content:attr(data-n);position:absolute;top:.8rem;right:1rem;font-size:.6rem;letter-spacing:.1em;color:#252525}
+    /* ── REVEAL ── */
+    .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+    .reveal.vis{opacity:1;transform:none}
+
+    /* ── QUICK START ── */
+    #quickstart{background:var(--gray3);border-top:1px solid #111;border-bottom:1px solid #111}
+    .qs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--gray2);margin-top:2.5rem}
+    .qs-step{padding:1.8rem 1.4rem;border-right:1px solid var(--gray2);position:relative;overflow:hidden;transition:background .25s;cursor:default}
+    .qs-step:last-child{border-right:none}
+    .qs-step:hover{background:rgba(232,255,71,.018)}
+    .qs-num{font-family:var(--sans);font-size:2.8rem;font-weight:800;color:#111;line-height:1;margin-bottom:.7rem;transition:color .3s}
+    .qs-step:hover .qs-num{color:rgba(232,255,71,.1)}
+    .qs-step h3{font-family:var(--sans);font-size:.9rem;font-weight:700;margin-bottom:.35rem;color:var(--white)}
+    .qs-step p{font-size:.7rem;line-height:1.85;color:#3a3a3a}
+    .qs-step code{color:var(--yellow);font-family:var(--mono)}
+    .qs-step::after{content:attr(data-n);position:absolute;top:.7rem;right:.9rem;font-size:.56rem;letter-spacing:.1em;color:#181818}
+    .qs-connector{color:var(--yellow);position:absolute;right:-1px;top:50%;transform:translateY(-50%);font-size:.8rem;color:#1e1e1e;z-index:1}
 
     /* ── FEATURES ── */
     .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--gray2)}
-    .feature{padding:2rem;border-right:1px solid var(--gray2);border-bottom:1px solid var(--gray2);position:relative;overflow:hidden;transition:background .25s}
+    .feature{padding:1.8rem;border-right:1px solid var(--gray2);border-bottom:1px solid var(--gray2);position:relative;overflow:hidden;transition:background .25s}
     .feature:nth-child(3n){border-right:none}
     .feature:nth-last-child(-n+3){border-bottom:none}
-    .feature::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--yellow);transform:scaleX(0);transform-origin:left;transition:transform .35s}
-    .feature:hover{background:rgba(232,255,71,.018)}
+    .feature::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--yellow),transparent);transform:scaleX(0);transform-origin:left;transition:transform .4s}
+    .feature:hover{background:rgba(232,255,71,.015)}
     .feature:hover::before{transform:scaleX(1)}
-    .feature-icon{font-size:1.4rem;margin-bottom:.8rem;display:block}
-    .feature h3{font-family:var(--sans);font-size:.95rem;font-weight:700;margin-bottom:.45rem}
-    .feature p{font-size:.72rem;line-height:1.85;color:#4a4a4a}
-    .ftag{display:inline-block;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--yellow);border:1px solid rgba(232,255,71,.18);padding:.1rem .4rem;margin-top:.7rem}
+    .feature-icon{font-size:1.2rem;margin-bottom:.7rem;display:block;opacity:.7}
+    .feature h3{font-family:var(--sans);font-size:.9rem;font-weight:700;margin-bottom:.4rem}
+    .feature p{font-size:.7rem;line-height:1.9;color:#404040}
+    .feature p code{color:var(--yellow);font-family:var(--mono)}
+    .ftag{display:inline-block;font-size:.56rem;letter-spacing:.1em;text-transform:uppercase;color:var(--yellow);border:1px solid rgba(232,255,71,.16);padding:.08rem .38rem;margin-top:.65rem}
+    .feature-new::after{content:'NEW';position:absolute;top:.9rem;right:.9rem;font-size:.5rem;letter-spacing:.14em;color:var(--cyan);border:1px solid rgba(71,255,232,.2);padding:.06rem .3rem}
 
-    /* ── COMMANDS TABLE ── */
-    #commands{background:var(--gray3);border-top:1px solid var(--gray2);border-bottom:1px solid var(--gray2)}
-    .cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin-top:2.5rem}
-    .cmd-row{background:var(--black);padding:.9rem 1.2rem;display:grid;grid-template-columns:130px 1fr auto;gap:1rem;align-items:center;transition:background .2s;cursor:default}
-    .cmd-row:hover{background:rgba(232,255,71,.025)}
-    .cmd-trigger{color:var(--cyan);font-size:.75rem;font-family:var(--mono)}
-    .cmd-desc{font-size:.72rem;color:#555;line-height:1.5}
-    .cmd-cat{font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:#2a2a2a;white-space:nowrap}
-    .cmd-row:hover .cmd-cat{color:#444}
-
-    /* ── PROVIDERS ── */
-    .providers-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin-top:3rem}
-    .pcard{background:var(--black);padding:2rem 1.5rem;display:flex;flex-direction:column;gap:.45rem;transition:background .2s;position:relative;overflow:hidden}
+    /* ── PROVIDER STRIP ── */
+    #providers{background:var(--gray3);border-top:1px solid #111;border-bottom:1px solid #111}
+    .providers-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin-top:2.5rem}
+    .pcard{background:var(--black);padding:1.8rem 1.4rem;display:flex;flex-direction:column;gap:.4rem;transition:background .2s;position:relative;overflow:hidden}
     .pcard::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;transform:scaleX(0);transition:transform .3s}
-    .pcard:nth-child(1)::after{background:#888}.pcard:nth-child(2)::after{background:#e8760a}.pcard:nth-child(3)::after{background:var(--green)}.pcard:nth-child(4)::after{background:var(--red)}
-    .pcard:hover{background:rgba(255,255,255,.018)}
+    .pcard:nth-child(1)::after{background:#777}
+    .pcard:nth-child(2)::after{background:#e8760a}
+    .pcard:nth-child(3)::after{background:var(--green)}
+    .pcard:nth-child(4)::after{background:var(--red)}
+    .pcard:hover{background:rgba(255,255,255,.015)}
     .pcard:hover::after{transform:scaleX(1)}
-    .pname{font-family:var(--sans);font-size:1.05rem;font-weight:700}
-    .pmodels{font-size:.68rem;color:#444;line-height:1.65}
-    .pbadge{display:inline-block;font-size:.58rem;letter-spacing:.08em;padding:.12rem .45rem;margin-top:.2rem;align-self:flex-start}
-    .b-free{background:rgba(71,255,138,.08);color:var(--green)}.b-key{background:rgba(232,255,71,.08);color:var(--yellow)}
-    .pcard-setup{font-size:.65rem;color:#2a2a2a;margin-top:.4rem;font-family:var(--mono)}
+    .pcard-provider-icon{font-size:1.6rem;margin-bottom:.3rem;line-height:1}
+    .pname{font-family:var(--sans);font-size:1rem;font-weight:700}
+    .pmodels{font-size:.65rem;color:#383838;line-height:1.7}
+    .pbadge{display:inline-block;font-size:.56rem;letter-spacing:.08em;padding:.1rem .4rem;margin-top:.15rem;align-self:flex-start}
+    .b-free{background:rgba(71,255,138,.06);color:var(--green);border:1px solid rgba(71,255,138,.15)}
+    .b-key{background:rgba(232,255,71,.06);color:var(--yellow);border:1px solid rgba(232,255,71,.15)}
+    .pcard-setup{font-size:.62rem;color:#252525;margin-top:.35rem;font-family:var(--mono)}
+    .pcard-highlight{background:rgba(71,255,138,.02)}
+    .pcard-highlight .pname{color:var(--green)}
+    .free-tag{display:inline-flex;align-items:center;gap:.3rem;font-size:.58rem;color:var(--green);margin-top:.2rem}
+    .free-tag::before{content:'★'}
 
-    /* ── NYX SECTION ── */
-    #nyx{background:var(--gray3);border-top:1px solid var(--gray2);border-bottom:1px solid var(--gray2)}
-    #nyx .inner{max-width:1200px;margin:0 auto;padding:6rem 2.5rem;display:grid;grid-template-columns:280px 1fr;gap:6rem;align-items:center}
-    .nyx-stage{display:flex;flex-direction:column;align-items:center;gap:2rem}
-    .nyx-big{font-family:var(--mono);white-space:pre;line-height:1.25;font-size:clamp(1rem,2.5vw,1.8rem);color:var(--yellow);transition:color .25s,opacity .15s;animation:float 3.5s ease-in-out infinite;text-align:center}
-    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-    .mood-pills{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
-    .mpill{background:transparent;border:1px solid #1e1e1e;color:#444;font-family:var(--mono);font-size:.62rem;padding:.3rem .7rem;cursor:pointer;transition:all .2s;letter-spacing:.08em}
+    /* ── COMMAND SHOWCASE ── */
+    #commands{background:var(--black)}
+    .cmd-tabs{display:flex;gap:0;border:1px solid var(--gray2);margin-top:2.5rem;overflow-x:auto}
+    .cmd-tab{padding:.7rem 1.4rem;font-family:var(--mono);font-size:.65rem;color:#333;cursor:pointer;border-right:1px solid var(--gray2);transition:all .2s;white-space:nowrap;background:transparent;border-top:none;border-bottom:none;border-left:none;letter-spacing:.06em}
+    .cmd-tab:last-child{border-right:none}
+    .cmd-tab:hover{color:var(--yellow);background:rgba(232,255,71,.018)}
+    .cmd-tab.active{color:var(--yellow);background:rgba(232,255,71,.04);border-bottom:none}
+    .cmd-panels{border:1px solid var(--gray2);border-top:none}
+    .cmd-panel{display:none;grid-template-columns:1fr 1fr;gap:0}
+    .cmd-panel.active{display:grid}
+    .cmd-list{border-right:1px solid var(--gray2)}
+    .cmd-row{padding:.8rem 1.1rem;display:grid;grid-template-columns:120px 1fr auto;gap:.8rem;align-items:center;transition:background .2s;cursor:default;border-bottom:1px solid #0d0d0d}
+    .cmd-row:last-child{border-bottom:none}
+    .cmd-row:hover{background:rgba(232,255,71,.02)}
+    .cmd-trigger{color:var(--cyan);font-size:.72rem;font-family:var(--mono)}
+    .cmd-desc{font-size:.68rem;color:#444;line-height:1.5}
+    .cmd-cat{font-size:.55rem;letter-spacing:.08em;text-transform:uppercase;color:#222;white-space:nowrap}
+    .cmd-row:hover .cmd-cat{color:#3a3a3a}
+    .cmd-demo-pane{padding:1.4rem;background:var(--gray3);display:flex;flex-direction:column;gap:.8rem}
+    .cmd-demo-title{font-family:var(--sans);font-size:.85rem;font-weight:700;color:var(--yellow)}
+    .cmd-demo-desc{font-size:.7rem;color:#444;line-height:1.85}
+    .cmd-demo-term{background:#060606;border:1px solid #1a1a1a;padding:.8rem 1rem;font-size:.68rem;line-height:1.8}
+
+    /* full command grid */
+    .cmd-all-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin-top:1rem}
+    .cmd-all-row{background:var(--black);padding:.7rem 1rem;display:grid;grid-template-columns:110px 1fr auto;gap:.8rem;align-items:center;transition:background .15s}
+    .cmd-all-row:hover{background:rgba(232,255,71,.02)}
+
+    /* ── NYX ── */
+    #nyx{background:var(--gray3);border-top:1px solid #111;border-bottom:1px solid #111}
+    #nyx .inner{max-width:1200px;margin:0 auto;padding:6rem 2.5rem;display:grid;grid-template-columns:260px 1fr;gap:5rem;align-items:center}
+    .nyx-stage{display:flex;flex-direction:column;align-items:center;gap:1.5rem}
+    .nyx-big{font-family:var(--mono);white-space:pre;line-height:1.3;font-size:clamp(.9rem,2.2vw,1.6rem);color:var(--yellow);animation:float 3.8s ease-in-out infinite;text-align:center}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    .mood-pills{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center}
+    .mpill{background:transparent;border:1px solid #1a1a1a;color:#333;font-family:var(--mono);font-size:.6rem;padding:.28rem .65rem;cursor:pointer;transition:all .2s;letter-spacing:.08em}
     .mpill:hover,.mpill.active{border-color:var(--yellow);color:var(--yellow);background:rgba(232,255,71,.04)}
-    .nyx-desc h3{font-family:var(--sans);font-size:2.2rem;font-weight:800;margin-bottom:.8rem}
-    .nyx-desc p{color:#555;font-size:.8rem;line-height:1.95;max-width:500px;margin-bottom:.8rem}
-    .nyx-facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin-top:2rem}
-    .nfact{background:var(--black);padding:1rem 1.2rem}
-    .nfact .nl{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:.25rem}
-    .nfact .nv{font-size:.78rem;color:var(--white)}
-    .coauthor-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(232,255,71,.06);border:1px solid rgba(232,255,71,.2);padding:.35rem .8rem;margin-top:1rem;font-size:.7rem;color:var(--yellow);font-family:var(--mono)}
-    .coauthor-badge::before{content:'⎇'}
+    .nyx-desc h3{font-family:var(--sans);font-size:2rem;font-weight:800;margin-bottom:.7rem}
+    .nyx-desc p{color:#484848;font-size:.78rem;line-height:2;max-width:500px;margin-bottom:.7rem}
+    .nyx-facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin-top:1.8rem}
+    .nfact{background:var(--black);padding:.9rem 1.1rem}
+    .nfact .nl{font-size:.56rem;letter-spacing:.14em;text-transform:uppercase;color:var(--yellow);margin-bottom:.2rem}
+    .nfact .nv{font-size:.76rem;color:var(--white)}
+    .coauthor-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(232,255,71,.05);border:1px solid rgba(232,255,71,.18);padding:.32rem .75rem;margin-top:.9rem;font-size:.68rem;color:var(--yellow);font-family:var(--mono)}
+    .coauthor-badge::before{content:'⎇';margin-right:.1rem}
 
-    /* ── DEMO/TERMINAL REPLAY ── */
-    #demo{overflow:hidden}
-    .demo-wrap{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:start;margin-top:3rem}
-    .demo-steps{display:flex;flex-direction:column;gap:0}
-    .dstep{padding:1.2rem 1.5rem;border-left:2px solid #1a1a1a;cursor:pointer;transition:all .2s;position:relative}
-    .dstep::before{content:'';position:absolute;left:-2px;top:0;bottom:0;width:2px;background:var(--yellow);transform:scaleY(0);transform-origin:top;transition:transform .3s}
-    .dstep.active{border-left-color:transparent}
-    .dstep.active::before{transform:scaleY(1)}
-    .dstep.active .dstep-title{color:var(--yellow)}
-    .dstep-num{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:#333;margin-bottom:.2rem}
-    .dstep-title{font-family:var(--sans);font-size:.95rem;font-weight:700;color:#444;transition:color .2s;margin-bottom:.3rem}
-    .dstep-desc{font-size:.72rem;color:#333;line-height:1.7;max-height:0;overflow:hidden;transition:max-height .3s,color .2s}
-    .dstep.active .dstep-desc{max-height:100px;color:#555}
-    .demo-terminal{position:sticky;top:6rem}
+    /* ── WHY LOCALCODE (vs section) ── */
+    #why{background:var(--black)}
+    .vs-table{border:1px solid var(--gray2);margin-top:2.5rem;overflow:hidden}
+    .vs-header{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;background:var(--gray3);border-bottom:1px solid var(--gray2)}
+    .vs-col-header{padding:.75rem 1.1rem;font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#3a3a3a;border-right:1px solid var(--gray2)}
+    .vs-col-header:last-child{border-right:none}
+    .vs-col-header.lc{color:var(--yellow)}
+    .vs-row{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;border-bottom:1px solid #0d0d0d;transition:background .15s}
+    .vs-row:last-child{border-bottom:none}
+    .vs-row:hover{background:rgba(232,255,71,.012)}
+    .vs-cell{padding:.75rem 1.1rem;font-size:.7rem;color:#444;border-right:1px solid #0d0d0d;display:flex;align-items:center;gap:.4rem}
+    .vs-cell:last-child{border-right:none}
+    .vs-cell.feature-name{color:var(--white);font-size:.72rem}
+    .vs-cell.yes{color:var(--green)}
+    .vs-cell.no{color:#2a2a2a}
+    .vs-cell.partial{color:var(--yellow)}
+    .vs-cell.lc-cell{background:rgba(232,255,71,.02)}
 
     /* ── INSTALL ── */
-    #install{text-align:center;padding:7rem 2.5rem;background:var(--gray3);border-top:1px solid var(--gray2)}
-    #install .inner{max-width:680px;margin:0 auto}
-    .ibox{background:var(--black);border:1px solid var(--gray2);padding:.8rem 1.4rem;display:flex;align-items:center;gap:1rem;margin:1.8rem auto;max-width:520px;position:relative}
-    .ibox::before{content:'$';color:var(--yellow);flex-shrink:0}
-    .icmd{flex:1;font-size:.88rem;color:var(--white);text-align:left}
-    .cpbtn{background:transparent;border:1px solid #2a2a2a;color:#444;font-family:var(--mono);font-size:.62rem;padding:.28rem .6rem;cursor:pointer;transition:all .2s;flex-shrink:0}
+    #install{text-align:center;padding:7rem 2.5rem;background:var(--gray3);border-top:1px solid #111}
+    #install .inner{max-width:700px;margin:0 auto}
+    .install-methods{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--gray2);border:1px solid var(--gray2);margin:2.2rem auto;text-align:left}
+    .imethod{background:var(--black);padding:1.4rem 1.6rem}
+    .imethod-label{font-size:.58rem;letter-spacing:.14em;text-transform:uppercase;color:#333;margin-bottom:.8rem}
+    .ibox{background:var(--gray3);border:1px solid #1a1a1a;padding:.65rem 1.1rem;display:flex;align-items:center;gap:.9rem;margin-bottom:.6rem}
+    .ibox::before{content:'$';color:var(--yellow);flex-shrink:0;font-size:.82rem}
+    .icmd{flex:1;font-size:.82rem;color:var(--white)}
+    .cpbtn{background:transparent;border:1px solid #252525;color:#3a3a3a;font-family:var(--mono);font-size:.6rem;padding:.24rem .55rem;cursor:pointer;transition:all .2s;flex-shrink:0}
     .cpbtn:hover{border-color:var(--yellow);color:var(--yellow)}
     .cpbtn.ok{border-color:var(--green);color:var(--green)}
-    .ialt{color:#333;font-size:.72rem;margin-top:1rem}
-    .ialt a{color:#3a3a3a;text-decoration:none;border-bottom:1px solid #252525;transition:color .2s,border-color .2s}
-    .ialt a:hover{color:var(--yellow);border-color:var(--yellow)}
-    .req-row{display:flex;justify-content:center;gap:2rem;margin-top:2.5rem;flex-wrap:wrap}
-    .req-item{font-size:.68rem;color:#333;display:flex;align-items:center;gap:.4rem}
-    .req-item::before{content:'◎';color:var(--yellow)}
+    .imethod-note{font-size:.66rem;color:#292929;line-height:1.7}
+    .req-row{display:flex;justify-content:center;gap:2rem;margin-top:2rem;flex-wrap:wrap}
+    .req-item{font-size:.66rem;color:#282828;display:flex;align-items:center;gap:.4rem}
+    .req-item::before{content:'◎';color:var(--yellow);opacity:.5}
+    .install-run{margin-top:2rem}
+    .install-run-label{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:#222;margin-bottom:.7rem}
 
     /* ── FOOTER ── */
-    footer{border-top:1px solid var(--gray2);padding:1.8rem 2.5rem;display:flex;justify-content:space-between;align-items:center;font-size:.68rem;color:#2a2a2a;flex-wrap:wrap;gap:1rem}
-    footer a{color:#333;text-decoration:none;transition:color .2s}
+    footer{border-top:1px solid #111;padding:1.6rem 2.5rem;display:flex;justify-content:space-between;align-items:center;font-size:.65rem;color:#222;flex-wrap:wrap;gap:1rem}
+    footer a{color:#2e2e2e;text-decoration:none;transition:color .2s}
     footer a:hover{color:var(--yellow)}
+    .footer-links{display:flex;gap:1.8rem;align-items:center}
+    .mit-badge{display:inline-flex;align-items:center;gap:.3rem;border:1px solid #1a1a1a;padding:.15rem .5rem;font-size:.58rem;color:#2a2a2a;transition:all .2s}
+    .mit-badge:hover{border-color:var(--yellow);color:var(--yellow)}
 
     /* ── BRACKET CORNERS ── */
     .bc{position:relative}
     .bc::before,.bc::after{content:'';position:absolute;width:10px;height:10px}
-    .bc::before{top:-5px;left:-5px;border-top:2px solid var(--yellow);border-left:2px solid var(--yellow)}
-    .bc::after{bottom:-5px;right:-5px;border-bottom:2px solid var(--yellow);border-right:2px solid var(--yellow)}
-
-    /* ── REVEAL ── */
-    .reveal{opacity:0;transform:translateY(20px);transition:opacity .65s ease,transform .65s ease}
-    .reveal.vis{opacity:1;transform:none}
+    .bc::before{top:-5px;left:-5px;border-top:2px solid rgba(232,255,71,.4);border-left:2px solid rgba(232,255,71,.4)}
+    .bc::after{bottom:-5px;right:-5px;border-bottom:2px solid rgba(232,255,71,.4);border-right:2px solid rgba(232,255,71,.4)}
 
     /* ── ANIMATIONS ── */
     @keyframes fadeUp{to{opacity:1;transform:none}}
@@ -224,50 +267,82 @@
       15%{clip-path:inset(40% 0 45% 0);transform:translate(2px,0)}
       30%{clip-path:inset(75% 0 8% 0);transform:translate(-1px,0)}
       45%{clip-path:inset(15% 0 75% 0);transform:translate(1px,0)}
-      60%{clip-path:inset(0 0 0 0);transform:translate(0,0)}
-      100%{clip-path:inset(0 0 0 0);transform:translate(0,0)}
+      60%{clip-path:none;transform:translate(0,0)}
+      100%{clip-path:none;transform:translate(0,0)}
     }
 
+    /* ── GLOW BADGES ── */
+    .glow-yellow{box-shadow:var(--glow-y)}
+    .glow-cyan{box-shadow:var(--glow-c)}
+
+    /* ── PLUGIN SECTION ── */
+    #plugins{background:var(--gray3);border-top:1px solid #111;border-bottom:1px solid #111}
+    .plugin-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;margin-top:2.5rem}
+    .plugin-code{background:#060606;border:1px solid #1a1a1a;padding:1.2rem 1.4rem;font-size:.7rem;line-height:1.9;position:relative}
+    .plugin-code::before{content:'plugin.js';position:absolute;top:.5rem;right:.8rem;font-size:.56rem;color:#252525;letter-spacing:.08em}
+    .plugin-code .kw{color:var(--cyan)}.plugin-code .str{color:var(--green)}.plugin-code .fn{color:var(--yellow)}.plugin-code .cm{color:#2a2a2a}
+    .plugin-features{display:flex;flex-direction:column;gap:.9rem}
+    .plugin-feat{display:flex;gap:.9rem;align-items:flex-start}
+    .plugin-feat-icon{color:var(--yellow);flex-shrink:0;font-size:.9rem;margin-top:.1rem}
+    .plugin-feat h4{font-family:var(--sans);font-size:.85rem;font-weight:700;margin-bottom:.2rem}
+    .plugin-feat p{font-size:.7rem;color:#404040;line-height:1.75}
+
     /* ── RESPONSIVE ── */
-    @media(max-width:960px){
-      #hero{grid-template-columns:1fr;padding-top:6rem}
+    @media(max-width:1024px){
+      #hero{grid-template-columns:1fr;padding-top:6rem;max-width:100%}
       .hero-right{display:none}
-      .steps{grid-template-columns:1fr 1fr}
-      .step:nth-child(2){border-right:none}
-      .step:nth-child(3){border-top:1px solid var(--gray2)}
+      .qs-grid{grid-template-columns:1fr 1fr}
+      .qs-step:nth-child(2){border-right:none}
+      .qs-step:nth-child(3){border-top:1px solid var(--gray2)}
       .features-grid{grid-template-columns:1fr 1fr}
       .feature:nth-child(2n){border-right:none}
       .feature:nth-child(3n){border-right:1px solid var(--gray2)}
       .providers-grid{grid-template-columns:1fr 1fr}
-      #nyx .inner{grid-template-columns:1fr;padding:4rem 1.5rem}
+      #nyx .inner{grid-template-columns:1fr;padding:4rem 1.5rem;gap:3rem}
       .nyx-facts{grid-template-columns:1fr}
-      .demo-wrap{grid-template-columns:1fr}
-      .cmd-grid{grid-template-columns:1fr}
+      .vs-header,.vs-row{grid-template-columns:1.4fr 1fr 1fr 1fr}
+      .cmd-panel.active{grid-template-columns:1fr}
+      .cmd-demo-pane{display:none}
+      .install-methods{grid-template-columns:1fr}
+      .plugin-grid{grid-template-columns:1fr;gap:2rem}
     }
-    @media(max-width:600px){
-      nav{padding:.9rem 1.2rem}
+    @media(max-width:768px){
+      nav{padding:.8rem 1.2rem}
       .nav-links li:not(:last-child){display:none}
       .section-wrap{padding:4rem 1.2rem}
       #install{padding:5rem 1.2rem}
       .features-grid{grid-template-columns:1fr}
       .feature:nth-child(n){border-right:none}
       .providers-grid{grid-template-columns:1fr}
-      .steps{grid-template-columns:1fr}
-      .step{border-right:none!important;border-bottom:1px solid var(--gray2)}
+      .qs-grid{grid-template-columns:1fr}
+      .qs-step{border-right:none!important;border-bottom:1px solid var(--gray2)}
+      .vs-header,.vs-row{grid-template-columns:1fr 1fr}
+      .vs-cell:nth-child(3),.vs-col-header:nth-child(3){display:none}
+      .vs-cell:nth-child(4),.vs-col-header:nth-child(4){display:none}
+      .cmd-all-grid{grid-template-columns:1fr}
+      .cmd-tabs{flex-wrap:nowrap}
+      footer{flex-direction:column;align-items:flex-start;gap:.7rem}
+      h1{font-size:2.6rem}
     }
   </style>
 </head>
 <body>
 <div class="scanbeam"></div>
+<div class="hero-grid"></div>
 
 <!-- NAV -->
-<nav>
-  <a class="nav-logo" href="#"><span>Local</span>Code</a>
+<nav id="nav">
+  <a class="nav-logo" href="#">
+    <span>Local</span><span style="color:var(--white)">Code</span>
+    <span class="nav-logo-cat">( ·.· )</span>
+    <span class="nav-ver">v3.1.0</span>
+  </a>
   <ul class="nav-links">
-    <li><a href="#how">How it works</a></li>
+    <li><a href="#quickstart">Quick start</a></li>
     <li><a href="#features">Features</a></li>
-    <li><a href="#nyx">Nyx</a></li>
     <li><a href="#commands">Commands</a></li>
+    <li><a href="#why">Why LC</a></li>
+    <li><a href="#nyx">Nyx</a></li>
     <li><a href="#providers">Providers</a></li>
     <li><a href="#install" class="nav-cta">Install →</a></li>
   </ul>
@@ -275,23 +350,28 @@
 
 <!-- HERO -->
 <section id="hero">
-  <div class="hero-grid"></div>
   <div class="hero-left">
-    <div class="hero-tag">@localcode/cli · v2.1 · MIT</div>
+    <div class="hero-tag">
+      <span class="hero-tag-dot"></span>
+      @localcode/cli &nbsp;·&nbsp; v3.1.0 &nbsp;·&nbsp; MIT open source
+    </div>
     <h1>
       <span class="gw" data-t="Code">Code</span><br/>
-      <span class="acc gw" data-t="locally.">locally.</span><br/>
-      <span class="dim">Think freely.</span>
+      <span class="acc gw" data-t="offline.">offline.</span><br/>
+      <span class="acc2">Own everything.</span>
     </h1>
-    <p class="hero-desc">A terminal AI coding assistant that runs on your machine. Works with Ollama, Claude, OpenAI, or Groq. Built by <strong style="color:var(--white)">TheAlxLabs</strong>, co-piloted by <strong style="color:var(--yellow)">Nyx</strong>.</p>
+    <p class="hero-desc">
+      A terminal AI coding assistant that runs <strong>100% local with Ollama</strong> — or connect Claude, OpenAI, or Groq. 30+ slash commands, a plugin system, hooks, MCP servers, and <strong>Nyx</strong>, your ASCII co-pilot.
+    </p>
     <div class="hero-actions">
-      <a href="#install" class="btn-p">↓ Install now</a>
+      <a href="#install" class="btn-p">↓ Install free</a>
       <a href="https://github.com/thealxlabs/localcode" class="btn-s" target="_blank">⎇ GitHub</a>
     </div>
     <div class="hero-stats">
       <div class="hero-stat"><div class="num">4</div><div class="lbl">Providers</div></div>
-      <div class="hero-stat"><div class="num">13</div><div class="lbl">Commands</div></div>
-      <div class="hero-stat"><div class="num">6</div><div class="lbl">Tool types</div></div>
+      <div class="hero-stat"><div class="num">30+</div><div class="lbl">Commands</div></div>
+      <div class="hero-stat"><div class="num">100%</div><div class="lbl">Free w/ Ollama</div></div>
+      <div class="hero-stat"><div class="num">MIT</div><div class="lbl">License</div></div>
     </div>
   </div>
 
@@ -299,7 +379,7 @@
     <div class="terminal bc" id="main-terminal">
       <div class="tbar">
         <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
-        <span class="ttitle">localcode — ~/projects/myapp</span>
+        <span class="ttitle">localcode — ~/projects/api</span>
       </div>
       <div class="tbody" id="tscene"></div>
       <button class="replay-btn" id="replay-btn">↺ replay</button>
@@ -309,58 +389,60 @@
 
 <!-- TICKER -->
 <div class="ticker-wrap">
-  <div class="ticker">
-    <span class="ticker-item">Runs local with Ollama</span>
-    <span class="ticker-item">Permission prompts before writes</span>
-    <span class="ticker-item">Streaming diffs</span>
-    <span class="ticker-item">Checkpoint system</span>
-    <span class="ticker-item">Co-authored by Nyx</span>
-    <span class="ticker-item">Claude · OpenAI · Groq · Ollama</span>
-    <span class="ticker-item">@file context injection</span>
-    <span class="ticker-item">TypeScript · Node 18+</span>
-    <span class="ticker-item">MIT License</span>
-    <span class="ticker-item">Runs local with Ollama</span>
-    <span class="ticker-item">Permission prompts before writes</span>
-    <span class="ticker-item">Streaming diffs</span>
-    <span class="ticker-item">Checkpoint system</span>
-    <span class="ticker-item">Co-authored by Nyx</span>
-    <span class="ticker-item">Claude · OpenAI · Groq · Ollama</span>
-    <span class="ticker-item">@file context injection</span>
-    <span class="ticker-item">TypeScript · Node 18+</span>
-    <span class="ticker-item">MIT License</span>
+  <div class="ticker" id="ticker">
+    <span class="ticker-item">100% offline with Ollama</span>
+    <span class="ticker-item">Multi-provider — Claude · OpenAI · Groq · Ollama</span>
+    <span class="ticker-item">30+ slash commands</span>
+    <span class="ticker-item">Plugin system — drop .js in ~/.localcode/plugins/</span>
+    <span class="ticker-item">Hooks — PreToolUse · PostToolUse · Notification</span>
+    <span class="ticker-item">Memory files — .nyx.md global + project</span>
+    <span class="ticker-item">MCP servers — stdio + HTTP</span>
+    <span class="ticker-item">4 built-in themes</span>
+    <span class="ticker-item">Vision input — /image with llava · GPT-4o · Claude</span>
+    <span class="ticker-item">TF-IDF codebase search with /index</span>
+    <span class="ticker-item">Session history — browse and restore</span>
+    <span class="ticker-item">MIT License — fork it, own it</span>
+    <span class="ticker-item">100% offline with Ollama</span>
+    <span class="ticker-item">Multi-provider — Claude · OpenAI · Groq · Ollama</span>
+    <span class="ticker-item">30+ slash commands</span>
+    <span class="ticker-item">Plugin system — drop .js in ~/.localcode/plugins/</span>
+    <span class="ticker-item">Hooks — PreToolUse · PostToolUse · Notification</span>
+    <span class="ticker-item">Memory files — .nyx.md global + project</span>
+    <span class="ticker-item">MCP servers — stdio + HTTP</span>
+    <span class="ticker-item">4 built-in themes</span>
+    <span class="ticker-item">Vision input — /image with llava · GPT-4o · Claude</span>
+    <span class="ticker-item">TF-IDF codebase search with /index</span>
+    <span class="ticker-item">Session history — browse and restore</span>
+    <span class="ticker-item">MIT License — fork it, own it</span>
   </div>
 </div>
 
-<!-- HOW IT WORKS -->
-<div id="how">
+<!-- QUICK START -->
+<div id="quickstart">
   <div class="section-wrap reveal">
-    <div class="section-label">How it works</div>
-    <h2>From install to<br/><span style="color:var(--yellow)">first commit.</span></h2>
-    <p class="section-sub">LocalCode is a single npm package. No config files, no daemons. Just a terminal.</p>
-    <div class="steps">
-      <div class="step" data-n="01">
-        <div class="step-icon">↓</div>
-        <div class="step-num">01</div>
+    <div class="section-label">Quick start</div>
+    <h2>Zero to <span style="color:var(--yellow)">first commit</span> in 60 seconds.</h2>
+    <p class="section-sub">One npm package. No config files, no daemons, no cloud setup required.</p>
+    <div class="qs-grid">
+      <div class="qs-step" data-n="01">
+        <div class="qs-num">01</div>
         <h3>Install</h3>
-        <p><code style="color:var(--yellow)">npm install -g @localcode/cli</code>. One command, Node 18+ required. Ollama optional.</p>
+        <p><code>npm install -g @localcode/cli</code><br/>Node 18+ required. That's it.</p>
       </div>
-      <div class="step" data-n="02">
-        <div class="step-icon">◈</div>
-        <div class="step-num">02</div>
-        <h3>Setup wizard</h3>
-        <p>First launch walks you through picking a provider, checking Ollama, and entering an API key if needed.</p>
+      <div class="qs-step" data-n="02">
+        <div class="qs-num">02</div>
+        <h3>Choose your provider</h3>
+        <p>Run <code>localcode</code> and pick a provider. Choose <code>ollama</code> for fully free, no-key-needed local AI.</p>
       </div>
-      <div class="step" data-n="03">
-        <div class="step-icon">❯</div>
-        <div class="step-num">03</div>
+      <div class="qs-step" data-n="03">
+        <div class="qs-num">03</div>
         <h3>Chat &amp; code</h3>
-        <p>Ask anything. LocalCode reads files, writes patches, runs shell commands — always asking permission first.</p>
+        <p>Ask anything. Nyx reads files, writes patches, runs shell commands — with permission prompts before every write.</p>
       </div>
-      <div class="step" data-n="04">
-        <div class="step-icon">⎇</div>
-        <div class="step-num">04</div>
-        <h3>Commit with Nyx</h3>
-        <p>Run <code style="color:var(--yellow)">/commit</code> to generate a conventional commit message. Nyx is automatically added as co-author.</p>
+      <div class="qs-step" data-n="04">
+        <div class="qs-num">04</div>
+        <h3>Ship it</h3>
+        <p>Run <code>/commit</code> to generate a conventional commit message. Nyx co-authors every one.</p>
       </div>
     </div>
   </div>
@@ -371,65 +453,458 @@
   <div class="section-wrap">
     <div class="section-label">Features</div>
     <h2>Built different.</h2>
-    <p class="section-sub">Every feature stays out of your way — until you need it.</p>
+    <p class="section-sub">Everything Claude Code and Codex have — plus the things they'll never give you.</p>
     <div class="features-grid reveal">
-      <div class="feature">
-        <span class="feature-icon">⚿</span>
-        <h3>Permission prompts</h3>
-        <p>Every file write, patch, or delete asks before executing. Press <code style="color:var(--yellow)">y</code> yes, <code style="color:var(--yellow)">n</code> no, or <code style="color:var(--yellow)">a</code> to allow all for the session.</p>
-        <span class="ftag">Safety</span>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">±</span>
-        <h3>Streaming diffs</h3>
-        <p>After every file edit you see the exact lines added and removed — inline, immediately, before the model continues.</p>
-        <span class="ftag">Transparency</span>
-      </div>
-      <div class="feature">
+      <div class="feature feature-new">
         <span class="feature-icon">◉</span>
-        <h3>Checkpoints</h3>
-        <p>Snapshot full session state before risky changes. <code style="color:var(--yellow)">/checkpoint before-refactor</code> and restore with <code style="color:var(--yellow)">/restore</code>.</p>
-        <span class="ftag">Safety net</span>
+        <h3>100% local with Ollama</h3>
+        <p>Run <code>qwen2.5-coder</code>, <code>deepseek-r1</code>, <code>llama3.2</code>, or any Ollama model. No API key. No cloud. Your code stays on your machine.</p>
+        <span class="ftag">Free forever</span>
       </div>
       <div class="feature">
-        <span class="feature-icon">@</span>
-        <h3>Context injection</h3>
-        <p>Reference any file or folder inline: <code style="color:var(--yellow)">@src/auth.ts</code> injects a file, <code style="color:var(--yellow)">@src/</code> injects the whole tree.</p>
-        <span class="ftag">Context</span>
+        <span class="feature-icon">⟳</span>
+        <h3>Switch providers live</h3>
+        <p>Use <code>/provider claude</code> mid-session. Switch from local Ollama to GPT-4o to Claude without restarting. Keys stored per-provider.</p>
+        <span class="ftag">Multi-provider</span>
       </div>
-      <div class="feature">
-        <span class="feature-icon">⎇</span>
-        <h3>AI-generated commits</h3>
-        <p><code style="color:var(--yellow)">/commit</code> reads your staged diff and writes a conventional commit message. Nyx co-authors every one.</p>
-        <span class="ftag">Git</span>
+      <div class="feature feature-new">
+        <span class="feature-icon">⧉</span>
+        <h3>Plugin system</h3>
+        <p>Drop a <code>.js</code> file in <code>~/.localcode/plugins/</code> to add custom slash commands. Full access to the conversation context and tools.</p>
+        <span class="ftag">Extensible</span>
+      </div>
+      <div class="feature feature-new">
+        <span class="feature-icon">⚡</span>
+        <h3>Hooks</h3>
+        <p><code>PreToolUse</code>, <code>PostToolUse</code>, and <code>Notification</code> hooks — run custom scripts before or after any tool call, just like Claude Code.</p>
+        <span class="ftag">Automation</span>
+      </div>
+      <div class="feature feature-new">
+        <span class="feature-icon">◈</span>
+        <h3>Memory files</h3>
+        <p><code>~/.nyx.md</code> for global memory, <code>.nyx.md</code> in project root for project context. Both loaded automatically at startup.</p>
+        <span class="ftag">Persistent context</span>
+      </div>
+      <div class="feature feature-new">
+        <span class="feature-icon">⬡</span>
+        <h3>MCP servers</h3>
+        <p>Connect Model Context Protocol servers — both stdio and HTTP transports supported. Give the AI access to your databases, APIs, and tools.</p>
+        <span class="ftag">Extensible</span>
       </div>
       <div class="feature">
         <span class="feature-icon">⊟</span>
-        <h3>Conversation compact</h3>
-        <p>Long sessions burn through context fast. <code style="color:var(--yellow)">/compact</code> asks the model to summarize and replaces all messages with that summary.</p>
-        <span class="ftag">Context window</span>
+        <h3>Vision input</h3>
+        <p><code>/image path/to/screenshot.png</code> — works with Claude, GPT-4o, and Ollama <code>llava</code>. Describe UI, debug layouts, analyze diagrams.</p>
+        <span class="ftag">Multimodal</span>
       </div>
       <div class="feature">
-        <span class="feature-icon">◈</span>
-        <h3>Multi-provider</h3>
-        <p>Switch between Ollama, Claude, OpenAI, and Groq at runtime with <code style="color:var(--yellow)">/provider</code>. Keys are stored per-provider.</p>
-        <span class="ftag">Flexibility</span>
+        <span class="feature-icon">⎇</span>
+        <h3>TF-IDF codebase search</h3>
+        <p><code>/index</code> builds a full semantic index of your project. Ask Nyx to find relevant files without passing your entire codebase as context.</p>
+        <span class="ftag">Smart context</span>
       </div>
       <div class="feature">
-        <span class="feature-icon">↑↓</span>
-        <h3>Shell history</h3>
-        <p>Arrow keys navigate your message history just like a real shell. Your last 100 messages are kept per session.</p>
-        <span class="ftag">UX</span>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">◎</span>
-        <h3>Session status</h3>
-        <p><code style="color:var(--yellow)">/status</code> shows provider, model, API key, message count, estimated token usage, and checkpoints at a glance.</p>
-        <span class="ftag">Observability</span>
+        <span class="feature-icon">⚿</span>
+        <h3>Permission prompts</h3>
+        <p>Every file write, patch, or shell command asks first. Press <code>y</code>, <code>n</code>, or <code>a</code> (allow all). Full control, always.</p>
+        <span class="ftag">Safety</span>
       </div>
     </div>
   </div>
 </section>
+
+<!-- PROVIDERS -->
+<div id="providers">
+  <div class="section-wrap">
+    <div class="section-label">Providers</div>
+    <h2>Your model,<br/><span style="color:var(--gray)">your choice.</span></h2>
+    <p class="section-sub">Switch live with <code style="color:var(--yellow)">/provider &lt;name&gt;</code>. API keys are stored per-provider and auto-loaded from env.</p>
+    <div class="providers-grid reveal">
+      <div class="pcard pcard-highlight">
+        <div class="pcard-provider-icon">&#x25C9;</div>
+        <span class="pname">Ollama</span>
+        <span class="pmodels">qwen2.5-coder · llama3.2 · deepseek-r1 · mistral · gemma3 · llava</span>
+        <span class="pbadge b-free">Free · Fully local · No API key</span>
+        <span class="free-tag">Runs 100% on your machine</span>
+        <span class="pcard-setup">Requires Ollama running locally</span>
+      </div>
+      <div class="pcard">
+        <div class="pcard-provider-icon" style="color:#e8760a">&#x2736;</div>
+        <span class="pname" style="color:#e8760a">Claude</span>
+        <span class="pmodels">claude-sonnet-4-5 · claude-opus-4-5 · claude-haiku-4-5</span>
+        <span class="pbadge b-key">ANTHROPIC_API_KEY</span>
+        <span class="pcard-setup">console.anthropic.com</span>
+      </div>
+      <div class="pcard">
+        <div class="pcard-provider-icon" style="color:var(--green)">&#x25A3;</div>
+        <span class="pname" style="color:var(--green)">OpenAI</span>
+        <span class="pmodels">gpt-4o · gpt-4o-mini · o1-mini · o3-mini</span>
+        <span class="pbadge b-key">OPENAI_API_KEY</span>
+        <span class="pcard-setup">platform.openai.com/api-keys</span>
+      </div>
+      <div class="pcard">
+        <div class="pcard-provider-icon" style="color:var(--red)">&#x25D9;</div>
+        <span class="pname" style="color:var(--red)">Groq</span>
+        <span class="pmodels">llama-3.3-70b · mixtral-8x7b · gemma2-9b</span>
+        <span class="pbadge b-free">Free tier available</span>
+        <span class="pcard-setup">console.groq.com/keys</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMANDS SHOWCASE -->
+<div id="commands">
+  <div class="section-wrap">
+    <div class="section-label">Commands</div>
+    <h2>30+ slash commands.<br/><span style="color:var(--yellow)">All in the terminal.</span></h2>
+    <p class="section-sub">Type <code style="color:var(--yellow)">/</code> to open the interactive picker. Every command has usage hints and tab completion.</p>
+
+    <div class="cmd-tabs" id="cmd-tabs">
+      <button class="cmd-tab active" data-panel="featured">Featured</button>
+      <button class="cmd-tab" data-panel="session">Session</button>
+      <button class="cmd-tab" data-panel="git">Git &amp; Code</button>
+      <button class="cmd-tab" data-panel="context">Context</button>
+      <button class="cmd-tab" data-panel="providers">Providers</button>
+      <button class="cmd-tab" data-panel="tools">Tools</button>
+      <button class="cmd-tab" data-panel="all">All commands</button>
+    </div>
+
+    <div class="cmd-panels">
+      <!-- FEATURED -->
+      <div class="cmd-panel active" id="panel-featured">
+        <div class="cmd-list">
+          <div class="cmd-row"><span class="cmd-trigger">/review</span><span class="cmd-desc">AI code review of a file or selection with actionable suggestions.</span><span class="cmd-cat">code</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/test</span><span class="cmd-desc">Generate unit tests for a file or function. Detects your test framework.</span><span class="cmd-cat">code</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/watch</span><span class="cmd-desc">Watch a file for changes and auto-explain diffs as they happen.</span><span class="cmd-cat">code</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/image</span><span class="cmd-desc">Send an image to the model (vision). Works with Claude, GPT-4o, llava.</span><span class="cmd-cat">multimodal</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">Generate a conventional commit message from staged diff. Nyx co-authors.</span><span class="cmd-cat">git</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/index</span><span class="cmd-desc">Build TF-IDF search index of your codebase for smart context retrieval.</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/web</span><span class="cmd-desc">Fetch a URL and inject its content as context for the conversation.</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/share</span><span class="cmd-desc">Export current session to a shareable markdown or HTML snippet.</span><span class="cmd-cat">session</span></div>
+        </div>
+        <div class="cmd-demo-pane">
+          <div class="cmd-demo-title">Try it: /review</div>
+          <div class="cmd-demo-desc">Paste a file path and get a structured code review — complexity analysis, potential bugs, style suggestions, and refactoring ideas. Works with any language Nyx can read.</div>
+          <div class="cmd-demo-term">
+            <div><span class="ty">❯</span> <span class="tw">/review src/api/auth.ts</span></div>
+            <div style="margin-top:.4rem"><span class="tg">◈ </span><span class="tw">Reading </span><span class="tc">src/api/auth.ts</span><span class="tg"> (142 lines)</span></div>
+            <div><span class="tgr">✓ </span><span class="tg">Review complete — 3 issues found</span></div>
+            <div style="margin-top:.3rem;color:#444">  [HIGH] SQL injection risk on line 48</div>
+            <div style="color:#444">  [MED]  No rate limiting on login endpoint</div>
+            <div style="color:#444">  [LOW]  Unused import: bcryptjs</div>
+          </div>
+          <div class="cmd-demo-title" style="margin-top:.8rem">Try it: /test</div>
+          <div class="cmd-demo-term">
+            <div><span class="ty">❯</span> <span class="tw">/test src/utils/parser.ts</span></div>
+            <div style="margin-top:.4rem"><span class="tg">◈ </span><span class="tg">Detected framework: </span><span class="ty">vitest</span></div>
+            <div><span class="tgr">✓ </span><span class="tg">Generated </span><span class="tw">12 tests</span><span class="tg"> → </span><span class="tc">src/utils/parser.test.ts</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SESSION -->
+      <div class="cmd-panel" id="panel-session">
+        <div class="cmd-list">
+          <div class="cmd-row"><span class="cmd-trigger">/clear</span><span class="cmd-desc">Clear conversation history. Checkpoints are preserved.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/compact</span><span class="cmd-desc">Summarize and compress the conversation to save context window.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/status</span><span class="cmd-desc">Show provider, model, key status, token count, and checkpoints.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/checkpoint</span><span class="cmd-desc">Save a named snapshot. Usage: /checkpoint before-refactor</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/restore</span><span class="cmd-desc">List or restore a saved checkpoint by ID.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/history</span><span class="cmd-desc">Browse and restore past sessions interactively.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/theme</span><span class="cmd-desc">Switch UI theme: dark · nord · monokai · light</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/share</span><span class="cmd-desc">Export session as shareable markdown or HTML snippet.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/ping</span><span class="cmd-desc">Test connection to the current provider. Shows latency.</span><span class="cmd-cat">session</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/exit</span><span class="cmd-desc">Save session state and quit the application.</span><span class="cmd-cat">session</span></div>
+        </div>
+        <div class="cmd-demo-pane">
+          <div class="cmd-demo-title">/theme</div>
+          <div class="cmd-demo-desc">Four built-in themes: dark (default), nord, monokai, and light. Instant toggle, persisted across sessions.</div>
+          <div class="cmd-demo-term">
+            <div><span class="ty">❯</span> <span class="tw">/theme nord</span></div>
+            <div style="margin-top:.3rem"><span class="tgr">✓ </span><span class="tg">Theme set to </span><span class="ty">nord</span></div>
+          </div>
+          <div class="cmd-demo-title" style="margin-top:.9rem">/history</div>
+          <div class="cmd-demo-desc">Browse your past sessions by date and topic. Select any session to restore its context — files, messages, and checkpoints.</div>
+        </div>
+      </div>
+
+      <!-- GIT -->
+      <div class="cmd-panel" id="panel-git">
+        <div class="cmd-list">
+          <div class="cmd-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">Generate a conventional commit message from staged diff. Nyx co-authors.</span><span class="cmd-cat">git</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/git</span><span class="cmd-desc">Run git commands with AI assistance. /git status, /git log, etc.</span><span class="cmd-cat">git</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/diff</span><span class="cmd-desc">Show all files modified by tool calls in this session.</span><span class="cmd-cat">git</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/review</span><span class="cmd-desc">AI code review of a file or selection with actionable feedback.</span><span class="cmd-cat">code</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/test</span><span class="cmd-desc">Generate unit tests. Auto-detects Jest, Vitest, Mocha, pytest, etc.</span><span class="cmd-cat">code</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/explain</span><span class="cmd-desc">Explain a file, function, or concept in plain English.</span><span class="cmd-cat">code</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/watch</span><span class="cmd-desc">Watch a file for changes and auto-explain diffs in real time.</span><span class="cmd-cat">code</span></div>
+        </div>
+        <div class="cmd-demo-pane">
+          <div class="cmd-demo-title">/commit — AI-generated commits</div>
+          <div class="cmd-demo-desc">Stage your changes, run /commit, and Nyx reads the diff and writes a conventional commit message. She's automatically added as co-author.</div>
+          <div class="cmd-demo-term">
+            <div><span class="ty">❯</span> <span class="tw">/commit</span></div>
+            <div style="margin-top:.3rem"><span class="tg">⟳ </span><span class="tg">Reading staged diff…</span></div>
+            <div><span class="tgr">✓ </span><span class="tw">feat(auth): add refresh token rotation</span></div>
+            <div style="color:#2e2e2e;font-size:.64rem;margin-top:.2rem">  Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTEXT -->
+      <div class="cmd-panel" id="panel-context">
+        <div class="cmd-list">
+          <div class="cmd-row"><span class="cmd-trigger">/context</span><span class="cmd-desc">Inject a file or folder into the conversation. Usage: /context src/</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/index</span><span class="cmd-desc">Build TF-IDF search index of your codebase. Enables smart context retrieval.</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/web</span><span class="cmd-desc">Fetch a URL and inject the page content as context.</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/image</span><span class="cmd-desc">Send an image to the model. Works with Claude, GPT-4o, and Ollama llava.</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/template</span><span class="cmd-desc">Apply a saved prompt template. /template init, /template review, etc.</span><span class="cmd-cat">context</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/alias</span><span class="cmd-desc">Create custom command aliases. /alias deploy="run npm run deploy"</span><span class="cmd-cat">context</span></div>
+        </div>
+        <div class="cmd-demo-pane">
+          <div class="cmd-demo-title">/index — TF-IDF codebase search</div>
+          <div class="cmd-demo-desc">Build a full semantic index of your project. Instead of injecting thousands of lines of context, Nyx finds the 5-10 most relevant files automatically.</div>
+          <div class="cmd-demo-term">
+            <div><span class="ty">❯</span> <span class="tw">/index</span></div>
+            <div style="margin-top:.3rem"><span class="tg">◈ </span><span class="tg">Indexed </span><span class="tw">847 files</span><span class="tg"> in 1.2s</span></div>
+            <div><span class="tgr">✓ </span><span class="tg">TF-IDF index ready. Ask me anything.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROVIDERS -->
+      <div class="cmd-panel" id="panel-providers">
+        <div class="cmd-list">
+          <div class="cmd-row"><span class="cmd-trigger">/provider</span><span class="cmd-desc">List or switch providers. Usage: /provider ollama</span><span class="cmd-cat">provider</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/model</span><span class="cmd-desc">Switch model for the active provider. Usage: /model qwen2.5-coder:7b</span><span class="cmd-cat">provider</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/apikey</span><span class="cmd-desc">Set or update API key for current provider.</span><span class="cmd-cat">provider</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/ping</span><span class="cmd-desc">Test provider connection and show latency.</span><span class="cmd-cat">provider</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/doctor</span><span class="cmd-desc">Run diagnostics: check Ollama, API keys, Node version, and config.</span><span class="cmd-cat">provider</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/init</span><span class="cmd-desc">Re-run the setup wizard. Pick provider, model, and configure keys.</span><span class="cmd-cat">provider</span></div>
+        </div>
+        <div class="cmd-demo-pane">
+          <div class="cmd-demo-title">/provider — live switching</div>
+          <div class="cmd-demo-desc">Switch between any provider mid-session without losing context. Your API keys are stored per-provider and reloaded automatically.</div>
+          <div class="cmd-demo-term">
+            <div><span class="ty">❯</span> <span class="tw">/provider claude</span></div>
+            <div style="margin-top:.3rem"><span class="tgr">✓ </span><span class="tg">Switched to </span><span class="ty">claude-sonnet-4-5</span></div>
+            <div><span class="ty">❯</span> <span class="tw">/provider ollama</span></div>
+            <div><span class="tgr">✓ </span><span class="tg">Switched to </span><span class="ty">qwen2.5-coder:7b</span><span class="tg"> (local)</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS -->
+      <div class="cmd-panel" id="panel-tools">
+        <div class="cmd-list">
+          <div class="cmd-row"><span class="cmd-trigger">/allowall</span><span class="cmd-desc">Toggle permission prompts for all tool calls this session.</span><span class="cmd-cat">tools</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/template</span><span class="cmd-desc">Manage and apply saved prompt templates.</span><span class="cmd-cat">tools</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/alias</span><span class="cmd-desc">Create or list command aliases for common tasks.</span><span class="cmd-cat">tools</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/hook</span><span class="cmd-desc">Manage PreToolUse, PostToolUse, and Notification hooks.</span><span class="cmd-cat">tools</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/mcp</span><span class="cmd-desc">Connect or list MCP (Model Context Protocol) servers.</span><span class="cmd-cat">tools</span></div>
+          <div class="cmd-row"><span class="cmd-trigger">/memory</span><span class="cmd-desc">View or edit the .nyx.md memory files (global and project).</span><span class="cmd-cat">tools</span></div>
+        </div>
+        <div class="cmd-demo-pane">
+          <div class="cmd-demo-title">/hook — automation</div>
+          <div class="cmd-demo-desc">Run custom scripts before or after any tool call. Wire up linters, formatters, notifications, or anything else you want Nyx to trigger automatically.</div>
+          <div class="cmd-demo-term">
+            <div style="color:#2a2a2a;font-size:.64rem">// ~/.localcode/hooks/post-write.sh</div>
+            <div style="color:#444">npm run lint --fix $FILE</div>
+            <div style="color:#444">git add $FILE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALL -->
+      <div class="cmd-panel" id="panel-all" style="display:none">
+        <div style="padding:1.2rem 1.4rem;grid-column:1/-1;width:100%">
+          <div class="cmd-all-grid">
+            <div class="cmd-all-row"><span class="cmd-trigger">/clear</span><span class="cmd-desc">Clear conversation history</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/compact</span><span class="cmd-desc">Compress conversation to save context</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/status</span><span class="cmd-desc">Show provider, model, tokens, checkpoints</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/checkpoint</span><span class="cmd-desc">Save named session snapshot</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/restore</span><span class="cmd-desc">Restore a checkpoint by ID</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/history</span><span class="cmd-desc">Browse and restore past sessions</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/theme</span><span class="cmd-desc">Switch UI theme (dark/nord/monokai/light)</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/share</span><span class="cmd-desc">Export session as markdown/HTML</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/ping</span><span class="cmd-desc">Test provider connection and latency</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/exit</span><span class="cmd-desc">Save and quit</span><span class="cmd-cat">session</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">AI-generated conventional commit</span><span class="cmd-cat">git</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/git</span><span class="cmd-desc">AI-assisted git commands</span><span class="cmd-cat">git</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/diff</span><span class="cmd-desc">Show session file modifications</span><span class="cmd-cat">git</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/review</span><span class="cmd-desc">AI code review with suggestions</span><span class="cmd-cat">code</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/test</span><span class="cmd-desc">Generate unit tests for a file</span><span class="cmd-cat">code</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/explain</span><span class="cmd-desc">Explain code in plain English</span><span class="cmd-cat">code</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/watch</span><span class="cmd-desc">Watch file and auto-explain changes</span><span class="cmd-cat">code</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/context</span><span class="cmd-desc">Inject file or folder as context</span><span class="cmd-cat">context</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/index</span><span class="cmd-desc">Build TF-IDF codebase search index</span><span class="cmd-cat">context</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/web</span><span class="cmd-desc">Fetch URL and inject as context</span><span class="cmd-cat">context</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/image</span><span class="cmd-desc">Vision input for Claude/GPT-4o/llava</span><span class="cmd-cat">context</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/template</span><span class="cmd-desc">Apply saved prompt templates</span><span class="cmd-cat">tools</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/alias</span><span class="cmd-desc">Create command aliases</span><span class="cmd-cat">tools</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/hook</span><span class="cmd-desc">Manage PreToolUse/PostToolUse hooks</span><span class="cmd-cat">tools</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/mcp</span><span class="cmd-desc">Connect MCP servers</span><span class="cmd-cat">tools</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/memory</span><span class="cmd-desc">View/edit .nyx.md memory files</span><span class="cmd-cat">tools</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/allowall</span><span class="cmd-desc">Toggle permission prompts</span><span class="cmd-cat">tools</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/provider</span><span class="cmd-desc">List or switch providers</span><span class="cmd-cat">provider</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/model</span><span class="cmd-desc">Switch model for active provider</span><span class="cmd-cat">provider</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/apikey</span><span class="cmd-desc">Set API key for current provider</span><span class="cmd-cat">provider</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/doctor</span><span class="cmd-desc">Run setup diagnostics</span><span class="cmd-cat">provider</span></div>
+            <div class="cmd-all-row"><span class="cmd-trigger">/init</span><span class="cmd-desc">Re-run setup wizard</span><span class="cmd-cat">provider</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PLUGIN SYSTEM -->
+<div id="plugins">
+  <div class="section-wrap reveal">
+    <div class="section-label">Plugin system</div>
+    <h2>Extend Nyx with<br/><span style="color:var(--cyan)">your own commands.</span></h2>
+    <p class="section-sub">Drop a <code style="color:var(--yellow)">.js</code> file in <code style="color:var(--yellow)">~/.localcode/plugins/</code> and it becomes a first-class slash command.</p>
+    <div class="plugin-grid">
+      <div class="plugin-code">
+        <div style="color:#333;font-size:.62rem;margin-bottom:.9rem;letter-spacing:.08em">// ~/.localcode/plugins/deploy.js</div>
+        <div><span class="kw">module</span>.<span class="fn">exports</span> = {</div>
+        <div>&nbsp;&nbsp;<span class="fn">name</span>: <span class="str">'deploy'</span>,</div>
+        <div>&nbsp;&nbsp;<span class="fn">description</span>: <span class="str">'Deploy to production'</span>,</div>
+        <div>&nbsp;&nbsp;<span class="kw">async</span> <span class="fn">run</span>({ context, tools }) {</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// Full access to AI context + tools</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">const</span> review = <span class="kw">await</span> context.<span class="fn">ask</span>(</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'Check for security issues'</span></div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;);</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> (review.<span class="fn">safe</span>) {</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">await</span> tools.<span class="fn">shell</span>(<span class="str">'npm run deploy'</span>);</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
+        <div>&nbsp;&nbsp;}</div>
+        <div>};</div>
+      </div>
+      <div class="plugin-features">
+        <div class="plugin-feat">
+          <span class="plugin-feat-icon">◈</span>
+          <div>
+            <h4>Zero boilerplate</h4>
+            <p>Name the file, export an object with <code style="color:var(--yellow)">name</code>, <code style="color:var(--yellow)">description</code>, and <code style="color:var(--yellow)">run</code>. Nyx hot-reloads it on next command.</p>
+          </div>
+        </div>
+        <div class="plugin-feat">
+          <span class="plugin-feat-icon">⚡</span>
+          <div>
+            <h4>Full AI access</h4>
+            <p>Plugins get the full conversation context, can ask the AI questions, and call any of LocalCode's built-in tools.</p>
+          </div>
+        </div>
+        <div class="plugin-feat">
+          <span class="plugin-feat-icon">⧉</span>
+          <div>
+            <h4>Share and publish</h4>
+            <p>Package your plugin as an npm module. Anyone can install it with <code style="color:var(--yellow)">npm install -g localcode-plugin-deploy</code>.</p>
+          </div>
+        </div>
+        <div class="plugin-feat">
+          <span class="plugin-feat-icon">⎇</span>
+          <div>
+            <h4>Hooks too</h4>
+            <p>Plugins can register <code style="color:var(--yellow)">PreToolUse</code> and <code style="color:var(--yellow)">PostToolUse</code> hooks that fire automatically on every tool call.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WHY LOCALCODE -->
+<div id="why">
+  <div class="section-wrap">
+    <div class="section-label">Why LocalCode</div>
+    <h2>The one they don't<br/><span style="color:var(--yellow)">want you to have.</span></h2>
+    <p class="section-sub">Claude Code is great — but it locks you in. LocalCode gives you everything they have, plus the things that matter for serious developers.</p>
+    <div class="vs-table reveal">
+      <div class="vs-header">
+        <div class="vs-col-header">Feature</div>
+        <div class="vs-col-header lc">LocalCode</div>
+        <div class="vs-col-header">Claude Code</div>
+        <div class="vs-col-header">Codex CLI</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Fully local / offline mode</div>
+        <div class="vs-cell yes lc-cell">✓ Free with Ollama</div>
+        <div class="vs-cell no">✗ Always cloud</div>
+        <div class="vs-cell no">✗ Always cloud</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Multi-provider support</div>
+        <div class="vs-cell yes lc-cell">✓ 4 providers</div>
+        <div class="vs-cell no">✗ Claude only</div>
+        <div class="vs-cell no">✗ OpenAI only</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Switch provider live</div>
+        <div class="vs-cell yes lc-cell">✓ /provider cmd</div>
+        <div class="vs-cell no">✗</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Open source (MIT)</div>
+        <div class="vs-cell yes lc-cell">✓ Full source</div>
+        <div class="vs-cell no">✗ Proprietary</div>
+        <div class="vs-cell partial">~ Partial</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Plugin system</div>
+        <div class="vs-cell yes lc-cell">✓ Drop .js files</div>
+        <div class="vs-cell no">✗</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Hooks (Pre/PostToolUse)</div>
+        <div class="vs-cell yes lc-cell">✓</div>
+        <div class="vs-cell yes">✓</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Memory files (.nyx.md)</div>
+        <div class="vs-cell yes lc-cell">✓ Global + project</div>
+        <div class="vs-cell yes">✓ CLAUDE.md</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">MCP server support</div>
+        <div class="vs-cell yes lc-cell">✓ stdio + HTTP</div>
+        <div class="vs-cell yes">✓</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Vision / image input</div>
+        <div class="vs-cell yes lc-cell">✓ /image cmd</div>
+        <div class="vs-cell yes">✓</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">TF-IDF codebase search</div>
+        <div class="vs-cell yes lc-cell">✓ /index cmd</div>
+        <div class="vs-cell no">✗</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Session history / restore</div>
+        <div class="vs-cell yes lc-cell">✓ /history cmd</div>
+        <div class="vs-cell no">✗</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Free to use</div>
+        <div class="vs-cell yes lc-cell">✓ With Ollama</div>
+        <div class="vs-cell no">✗ Subscription</div>
+        <div class="vs-cell partial">~ Free tier</div>
+      </div>
+    </div>
+    <p style="color:#252525;font-size:.66rem;margin-top:1.2rem;text-align:right">Last updated March 2026. Subject to change as tools evolve.</p>
+  </div>
+</div>
 
 <!-- NYX -->
 <div id="nyx">
@@ -437,7 +912,7 @@
     <div class="nyx-stage">
       <div class="nyx-big" id="nyx-art"> /\_/\
 ( ·.· )
- &gt; ♥ &lt;</div>
+ > ♥ < </div>
       <div class="mood-pills">
         <button class="mpill active" onclick="setMood('idle')">idle</button>
         <button class="mpill" onclick="setMood('thinking')">thinking</button>
@@ -449,12 +924,12 @@
     <div class="nyx-desc">
       <div class="section-label">Your co-pilot</div>
       <h3>Meet Nyx.</h3>
-      <p>Nyx is LocalCode's ASCII cat mascot. She lives in the header of every session, reacting in real time to what's happening — thinking when the model is working, lighting up green on success, going red on errors.</p>
-      <p>She's not just decoration. Every git commit made through <code style="color:var(--yellow)">/commit</code> is tagged with her co-author signature, so she shows up as a real contributor on your GitHub repos.</p>
+      <p>Nyx is LocalCode's ASCII cat mascot. She lives in the header of every session, reacting in real time to what's happening — thinking when the model is working, lighting up green on success, turning red on errors.</p>
+      <p>She's not just decoration. Every git commit made through <code style="color:var(--yellow)">/commit</code> carries her co-author signature — so she shows up as a real contributor on your GitHub repos.</p>
       <div class="coauthor-badge">Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</div>
       <div class="nyx-facts">
         <div class="nfact"><div class="nl">Mood states</div><div class="nv">idle · thinking · happy · error · waiting</div></div>
-        <div class="nfact"><div class="nl">Co-author email</div><div class="nv" style="font-family:var(--mono);font-size:.72rem">nyx@thealxlabs.ca</div></div>
+        <div class="nfact"><div class="nl">Co-author email</div><div class="nv" style="font-family:var(--mono);font-size:.7rem">nyx@thealxlabs.ca</div></div>
         <div class="nfact"><div class="nl">Appears in</div><div class="nv">Header · Commits · Errors · Setup wizard</div></div>
         <div class="nfact"><div class="nl">Created by</div><div class="nv"><a href="https://github.com/thealxlabs" style="color:var(--yellow);text-decoration:none">TheAlxLabs</a> · Toronto</div></div>
       </div>
@@ -462,292 +937,232 @@
   </div>
 </div>
 
-<!-- COMMANDS -->
-<div id="commands">
-  <div class="section-wrap reveal">
-    <div class="section-label">Reference</div>
-    <h2>Every command.</h2>
-    <p class="section-sub">Type <code style="color:var(--yellow)">/</code> in the app to open the interactive command picker with full descriptions and usage hints.</p>
-    <div class="cmd-grid">
-      <div class="cmd-row"><span class="cmd-trigger">/clear</span><span class="cmd-desc">Clear conversation history. Checkpoints are preserved.</span><span class="cmd-cat">session</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/compact</span><span class="cmd-desc">Summarize &amp; compress the conversation to save context window.</span><span class="cmd-cat">session</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/status</span><span class="cmd-desc">Show provider, model, key status, token count, checkpoints.</span><span class="cmd-cat">session</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/checkpoint</span><span class="cmd-desc">Save a named snapshot. Usage: <code style="color:var(--yellow)">/checkpoint before-refactor</code></span><span class="cmd-cat">session</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/restore</span><span class="cmd-desc">List or restore a saved checkpoint by ID.</span><span class="cmd-cat">session</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/exit</span><span class="cmd-desc">Save session state and quit the application.</span><span class="cmd-cat">session</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/context</span><span class="cmd-desc">Inject a file or folder into the conversation. Usage: <code style="color:var(--yellow)">/context src/</code></span><span class="cmd-cat">context</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/diff</span><span class="cmd-desc">Show all files modified by tool calls in this session.</span><span class="cmd-cat">context</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">Generate a conventional commit from staged changes. Nyx co-authors.</span><span class="cmd-cat">git</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/allowall</span><span class="cmd-desc">Toggle permission prompts for all tool calls this session.</span><span class="cmd-cat">tools</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/provider</span><span class="cmd-desc">List or switch providers. Usage: <code style="color:var(--yellow)">/provider claude</code></span><span class="cmd-cat">providers</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/apikey</span><span class="cmd-desc">Set API key for current provider. Usage: <code style="color:var(--yellow)">/apikey sk-ant-…</code></span><span class="cmd-cat">providers</span></div>
-      <div class="cmd-row"><span class="cmd-trigger">/model</span><span class="cmd-desc">Switch model for the active provider. Usage: <code style="color:var(--yellow)">/model qwen2.5-coder:7b</code></span><span class="cmd-cat">providers</span></div>
-    </div>
-  </div>
-</div>
-
-<!-- PROVIDERS -->
-<section id="providers">
-  <div class="section-wrap">
-    <div class="section-label">Providers</div>
-    <h2>Your model,<br/><span style="color:var(--gray)">your choice.</span></h2>
-    <p class="section-sub">Switch at runtime with <code style="color:var(--yellow)">/provider &lt;name&gt;</code>. API keys are stored per-provider and loaded from env automatically.</p>
-    <div class="providers-grid reveal">
-      <div class="pcard">
-        <span class="pname" style="color:#aaa">Ollama</span>
-        <span class="pmodels">qwen2.5-coder · llama3.2 · mistral · deepseek-r1 · gemma3</span>
-        <span class="pbadge b-free">Free · Local · No key</span>
-        <span class="pcard-setup">Needs Ollama running locally</span>
-      </div>
-      <div class="pcard">
-        <span class="pname" style="color:#e8760a">Claude</span>
-        <span class="pmodels">claude-sonnet-4-5 · claude-opus-4-5 · claude-haiku-4-5</span>
-        <span class="pbadge b-key">ANTHROPIC_API_KEY</span>
-        <span class="pcard-setup">console.anthropic.com</span>
-      </div>
-      <div class="pcard">
-        <span class="pname" style="color:var(--green)">OpenAI</span>
-        <span class="pmodels">gpt-4o · gpt-4o-mini · o1-mini · o3-mini</span>
-        <span class="pbadge b-key">OPENAI_API_KEY</span>
-        <span class="pcard-setup">platform.openai.com/api-keys</span>
-      </div>
-      <div class="pcard">
-        <span class="pname" style="color:var(--red)">Groq</span>
-        <span class="pmodels">llama-3.3-70b · mixtral-8x7b · gemma2-9b</span>
-        <span class="pbadge b-free">Free tier · GROQ_API_KEY</span>
-        <span class="pcard-setup">console.groq.com/keys</span>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- INSTALL -->
 <div id="install">
   <div class="inner reveal">
     <div class="section-label" style="justify-content:center">Get started</div>
-    <h2 style="font-size:clamp(2rem,5vw,3.8rem)">Ship it to your terminal.</h2>
-    <p style="color:#444;font-size:.82rem;margin-top:.5rem">Node 18 or later required. Ollama is optional.</p>
+    <h2 style="font-size:clamp(2rem,5vw,3.5rem)">Ship it to your<br/>terminal now.</h2>
+    <p style="color:#333;font-size:.8rem;margin-top:.5rem">Node 18 or later required. Ollama is optional — but recommended for free local AI.</p>
 
-    <div class="ibox bc">
-      <span class="icmd">npm install -g @localcode/cli</span>
-      <button class="cpbtn" onclick="cp(this,'npm install -g @localcode/cli')">copy</button>
+    <div class="install-methods bc">
+      <div class="imethod">
+        <div class="imethod-label">Global install (recommended)</div>
+        <div class="ibox">
+          <span class="icmd">npm install -g @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npm install -g @localcode/cli')">copy</button>
+        </div>
+        <div class="imethod-note">Installs the <code style="color:var(--yellow)">localcode</code> command globally.</div>
+      </div>
+      <div class="imethod">
+        <div class="imethod-label">No install needed</div>
+        <div class="ibox">
+          <span class="icmd">npx @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npx @localcode/cli')">copy</button>
+        </div>
+        <div class="imethod-note">Runs directly via npx. No global install required.</div>
+      </div>
     </div>
 
-    <div class="ialt">
-      No global install:
-      <a href="#" onclick="cp(event.currentTarget,'npx @localcode/cli');return false">npx @localcode/cli</a>
-      &nbsp;·&nbsp;
-      <a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a>
-      &nbsp;·&nbsp;
-      <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
+    <div class="install-run">
+      <div class="install-run-label">Then launch:</div>
+      <div class="ibox bc" style="max-width:360px;margin:0 auto">
+        <span class="icmd">localcode</span>
+        <button class="cpbtn" onclick="cp(this,'localcode')">copy</button>
+      </div>
+      <p style="color:#222;font-size:.68rem;margin-top:.7rem">First run → setup wizard → pick provider → start coding.</p>
     </div>
-
-    <div style="margin-top:2.5rem;color:#252525;font-size:.68rem;letter-spacing:.1em">THEN RUN:</div>
-    <div class="ibox bc">
-      <span class="icmd">localcode</span>
-      <button class="cpbtn" onclick="cp(this,'localcode')">copy</button>
-    </div>
-    <p style="color:#2a2a2a;font-size:.7rem;margin-top:.6rem">First run → setup wizard → provider → launch.</p>
 
     <div class="req-row">
       <span class="req-item">Node.js 18+</span>
       <span class="req-item">macOS · Linux · WSL</span>
       <span class="req-item">MIT License</span>
       <span class="req-item">TypeScript source</span>
+      <span class="req-item">0 telemetry</span>
     </div>
   </div>
 </div>
 
 <!-- FOOTER -->
 <footer>
-  <span><a href="#"><span style="color:var(--yellow)">LocalCode</span></a> · MIT · <a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a> · <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a></span>
+  <div class="footer-links">
+    <span><a href="#"><span style="color:var(--yellow)">LocalCode</span></a> v3.1.0</span>
+    <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
+    <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
+    <a href="https://github.com/thealxlabs/localcode/blob/main/LICENSE" target="_blank" class="mit-badge">MIT</a>
+  </div>
   <span>Built by <a href="https://github.com/thealxlabs" target="_blank">TheAlxLabs</a> · co-piloted by Nyx &nbsp;<span style="color:var(--yellow);font-family:var(--mono)">( ·.· )</span></span>
 </footer>
 
 <script>
-// ── TERMINAL ANIMATION ────────────────────────────────────────────────────────
+// ── CUSTOM CURSOR ────────────────────────────────────────────────────────────
+const dot = document.createElement('div');
+dot.style.cssText='position:fixed;width:5px;height:5px;background:var(--yellow);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:transform .1s ease';
+document.body.appendChild(dot);
+document.addEventListener('mousemove',e=>{dot.style.left=e.clientX+'px';dot.style.top=e.clientY+'px'});
+document.addEventListener('mousedown',()=>dot.style.transform='translate(-50%,-50%) scale(2.5)');
+document.addEventListener('mouseup',()=>dot.style.transform='translate(-50%,-50%) scale(1)');
+
+// ── NAV SCROLL ───────────────────────────────────────────────────────────────
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40);
+});
+
+// ── TERMINAL ANIMATION ───────────────────────────────────────────────────────
 const scene = document.getElementById('tscene');
 
-const NYX_HEADER = `<div class="tnyx-header">
+const NYX_HDR = `<div class="tnyx-header">
   <div class="tnyx-art" id="tnyx"> /\\_/\\ \n( ·.· )\n &gt; ♥ &lt; </div>
   <div class="tnyx-info">
-    <span><span class="ty" style="font-weight:700">LocalCode</span> <span class="tg">v2.1 · @localcode/cli</span></span>
-    <span><span class="tg">provider  </span><span class="ty">Ollama</span><span class="tg">  qwen2.5-coder:7b</span></span>
-    <span><span class="tg">cwd       </span><span class="tc">~/projects/myapp</span></span>
-    <span><span class="tg">tokens    </span><span class="tw">0</span></span>
+    <span><span class="ty" style="font-weight:700">LocalCode</span> <span class="tg">v3.1.0 · @localcode/cli</span></span>
+    <span><span class="tg">provider  </span><span class="ty">ollama</span><span class="tg">  qwen2.5-coder:7b</span></span>
+    <span><span class="tg">cwd       </span><span class="tc">~/projects/api</span></span>
+    <span><span class="tg">memory    </span><span class="tw">.nyx.md</span><span class="tg"> loaded</span></span>
   </div>
 </div>`;
 
+// Each frame: [delay_ms, html_or_null, typeTargetId, typeText, msPerChar, cursorId]
 const FRAMES = [
-  // frame: [delay_ms, html_to_append]
-  [0,   NYX_HEADER],
-  [200, `<div class="trow"><span class="ty">❯ </span><span class="tw" id="tw1"></span><span class="cursor" id="tc1"></span></div>`],
-  [300, null, 'tw1', 'refactor auth.ts to use async/await', 40, 'tc1'],
-  [1600,`<div class="trow" style="margin-top:.3rem"><span class="tg">◈ </span><span class="tw">Reading </span><span class="tc">src/auth.ts</span><span class="tg"> (84 lines)…</span></div>`],
-  [2100,`<div class="trow"><span class="tg">⟳ </span><span class="tc">read_file</span><span class="tg">  path='src/auth.ts'</span></div>`],
-  [2600,`<div class="tperm"><div style="font-size:.62rem;color:#555;margin-bottom:.25rem">Allow <span class="ty">patch_file</span> on src/auth.ts?</div><span class="ty">y</span><span class="tg"> yes · </span><span class="tg">n no · </span><span class="tg">a allow all</span></div>`],
-  [3400,`<div class="trow"><span class="tgr">✓ </span><span class="tg">Patched src/auth.ts  </span><span class="tgr">+12</span><span class="tg"> </span><span class="tr">-8</span></div>`],
-  [3600,`<div class="tdiff"><div class="tdiff-hdr">src/auth.ts</div><div class="tdiff-line"><span class="tdiff-del">- async function login(u, p) { return cb(u, p) }</span></div><div class="tdiff-line"><span class="tdiff-add">+ async function login(u, p) { return await auth(u, p) }</span></div></div>`],
-  [4400,`<div class="trow" style="margin-top:.3rem"><span class="ty">❯ </span><span class="tw" id="tw2"></span><span class="cursor" id="tc2"></span></div>`],
-  [4600, null, 'tw2', '/commit', 35, 'tc2'],
-  [5200,`<div class="trow"><span class="tg">⟳ </span><span class="tg">Generating commit message…</span></div>`],
-  [6200,`<div class="trow"><span class="tgr">✓ </span><span class="tw">refactor(auth): convert login to async/await</span></div>`],
-  [6600,`<div class="trow"><span class="tg" style="font-size:.65rem">  Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</span></div>`],
-  [7400,`<div class="trow" style="margin-top:.3rem"><span class="ty">❯ </span><span class="cursor"></span></div>`],
+  [0,    NYX_HDR],
+  [200,  `<div class="trow"><span class="ty">❯ </span><span class="tw" id="tw1"></span><span class="cursor" id="tc1"></span></div>`],
+  [300,  null,'tw1','review src/routes/auth.ts',38,'tc1'],
+  [1400, `<div class="trow"><span class="tg">◈ </span><span class="tw">Reading </span><span class="tc">src/routes/auth.ts</span><span class="tg"> (198 lines)</span></div>`],
+  [2000, `<div class="trow"><span class="tg">⟳ </span><span class="tc">read_file</span><span class="tg">  path='src/routes/auth.ts'</span></div>`],
+  [2700, `<div class="trow" style="margin-top:.2rem"><span class="tr">⚠ </span><span class="tw">[HIGH] SQL injection risk on line 48</span></div>`],
+  [3000, `<div class="trow"><span class="tr">⚠ </span><span class="tw">[MED]  No rate limiting on /login</span></div>`],
+  [3300, `<div class="trow"><span class="tg">  </span><span class="tg">[LOW]  Unused import: bcryptjs</span></div>`],
+  [3800, `<div class="trow" style="margin-top:.3rem"><span class="ty">❯ </span><span class="tw" id="tw2"></span><span class="cursor" id="tc2"></span></div>`],
+  [4000, null,'tw2','/provider claude',38,'tc2'],
+  [4900, `<div class="trow"><span class="tgr">✓ </span><span class="tg">Switched to </span><span class="ty">claude-sonnet-4-5</span></div>`],
+  [5400, `<div class="trow" style="margin-top:.3rem"><span class="ty">❯ </span><span class="tw" id="tw3"></span><span class="cursor" id="tc3"></span></div>`],
+  [5600, null,'tw3','/commit',38,'tc3'],
+  [6300, `<div class="trow"><span class="tg">⟳ </span><span class="tg">Generating commit from staged diff…</span></div>`],
+  [7200, `<div class="trow"><span class="tgr">✓ </span><span class="tw">fix(auth): sanitize inputs + add rate limiting</span></div>`],
+  [7600, `<div class="trow"><span class="tg" style="font-size:.64rem">  Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</span></div>`],
+  [8300, `<div class="trow" style="margin-top:.3rem"><span class="ty">❯ </span><span class="cursor"></span></div>`],
 ];
 
-let animId = null;
 let timeouts = [];
+function clearAnim(){timeouts.forEach(clearTimeout);timeouts=[];}
 
-function clearAnim() {
-  timeouts.forEach(clearTimeout);
-  timeouts = [];
-  if (animId) cancelAnimationFrame(animId);
-}
-
-function typeText(elId, text, msPerChar, cursorId) {
-  return new Promise(res => {
-    const el = document.getElementById(elId);
-    if (!el) { res(); return; }
-    const cur = cursorId ? document.getElementById(cursorId) : null;
-    let i = 0;
-    function tick() {
-      if (!el) { res(); return; }
-      el.textContent = text.slice(0, i);
+function typeText(elId,text,msPerChar,cursorId){
+  return new Promise(res=>{
+    const el=document.getElementById(elId);
+    if(!el){res();return;}
+    const cur=cursorId?document.getElementById(cursorId):null;
+    let i=0;
+    function tick(){
+      if(!el){res();return;}
+      el.textContent=text.slice(0,i);
       i++;
-      if (i <= text.length) {
-        const t = setTimeout(tick, msPerChar);
-        timeouts.push(t);
-      } else {
-        if (cur) cur.remove();
-        res();
-      }
+      if(i<=text.length){timeouts.push(setTimeout(tick,msPerChar));}
+      else{if(cur)cur.remove();res();}
     }
     tick();
   });
 }
 
-function playTerminal() {
+function playTerminal(){
   clearAnim();
-  scene.innerHTML = '';
-  // nyx mood reset
-  const art = document.getElementById('tnyx');
-
-  let pending = [];
-
-  FRAMES.forEach(([delay, html, twId, twText, twSpeed, tcId]) => {
-    const t = setTimeout(async () => {
-      if (html) {
-        scene.insertAdjacentHTML('beforeend', html);
-        scene.scrollTop = scene.scrollHeight;
-      }
-      if (twId && twText) {
-        await typeText(twId, twText, twSpeed || 40, tcId);
-        scene.scrollTop = scene.scrollHeight;
-      }
-    }, delay);
+  scene.innerHTML='';
+  FRAMES.forEach(([delay,html,twId,twText,twSpeed,tcId])=>{
+    const t=setTimeout(async()=>{
+      if(html){scene.insertAdjacentHTML('beforeend',html);scene.scrollTop=scene.scrollHeight;}
+      if(twId&&twText){await typeText(twId,twText,twSpeed||38,tcId);scene.scrollTop=scene.scrollHeight;}
+    },delay);
     timeouts.push(t);
   });
-
-  // Nyx thinking at frame 1600
-  timeouts.push(setTimeout(() => {
-    const n = document.getElementById('tnyx');
-    if (n) { n.innerHTML = ' /\\_/\\ \n( ?.? )\n &gt; ~ &lt; '; }
-  }, 1600));
-  // Nyx happy after commit
-  timeouts.push(setTimeout(() => {
-    const n = document.getElementById('tnyx');
-    if (n) { n.innerHTML = ' /\\_/\\ \n( ^.^ )\n &gt; ★ &lt; '; n.style.color = 'var(--green)'; }
-  }, 6200));
+  // Nyx mood transitions
+  timeouts.push(setTimeout(()=>{const n=document.getElementById('tnyx');if(n)n.innerHTML=' /\\_/\\ \n( ?.? )\n &gt; ~ &lt; ';},1400));
+  timeouts.push(setTimeout(()=>{const n=document.getElementById('tnyx');if(n){n.innerHTML=' /\\_/\\ \n( ^.^ )\n &gt; ★ &lt; ';n.style.color='var(--green)';}},7200));
 }
 
-document.getElementById('replay-btn').addEventListener('click', playTerminal);
+document.getElementById('replay-btn').addEventListener('click',playTerminal);
 playTerminal();
 
-// ── NYX MOOD SWITCHER ─────────────────────────────────────────────────────────
-const MOODS = {
-  idle:     {art:' /\\_/\\ \n( ·.· )\n &gt; ♥ &lt; ', color:'var(--yellow)'},
-  thinking: {art:' /\\_/\\ \n( ?.? )\n &gt; ~ &lt; ', color:'var(--yellow)'},
-  happy:    {art:' /\\_/\\ \n( ^.^ )\n &gt; ★ &lt; ', color:'var(--green)'},
-  error:    {art:' /\\_/\\ \n( ×.× )\n &gt; ! &lt; ', color:'var(--red)'},
-  waiting:  {art:' /\\_/\\ \n( -.o )\n &gt; … &lt; ', color:'#888'},
+// ── NYX MOOD SWITCHER ────────────────────────────────────────────────────────
+const MOODS={
+  idle:    {art:' /\\_/\\ \n( ·.· )\n &gt; ♥ &lt; ',color:'var(--yellow)'},
+  thinking:{art:' /\\_/\\ \n( ?.? )\n &gt; ~ &lt; ',color:'var(--yellow)'},
+  happy:   {art:' /\\_/\\ \n( ^.^ )\n &gt; ★ &lt; ',color:'var(--green)'},
+  error:   {art:' /\\_/\\ \n( ×.× )\n &gt; ! &lt; ',color:'var(--red)'},
+  waiting: {art:' /\\_/\\ \n( -.o )\n &gt; … &lt; ',color:'#888'},
 };
-
-const nyxEl = document.getElementById('nyx-art');
-nyxEl.style.transition = 'opacity .15s,transform .15s,color .25s';
-
-let autoMood = true;
-function setMood(mood) {
-  const m = MOODS[mood];
-  nyxEl.style.opacity = '0';
-  nyxEl.style.transform = 'scale(0.92)';
-  setTimeout(() => {
-    nyxEl.innerHTML = m.art;
-    nyxEl.style.color = m.color;
-    nyxEl.style.opacity = '1';
-    nyxEl.style.transform = 'scale(1)';
-  }, 150);
-  document.querySelectorAll('.mpill').forEach(b => b.classList.toggle('active', b.textContent === mood));
+const nyxEl=document.getElementById('nyx-art');
+function setMood(mood){
+  const m=MOODS[mood];
+  nyxEl.style.opacity='0';
+  nyxEl.style.transform='scale(0.9)';
+  nyxEl.style.transition='opacity .15s,transform .15s,color .2s';
+  setTimeout(()=>{
+    nyxEl.innerHTML=m.art;
+    nyxEl.style.color=m.color;
+    nyxEl.style.opacity='1';
+    nyxEl.style.transform='scale(1)';
+  },150);
+  document.querySelectorAll('.mpill').forEach(b=>b.classList.toggle('active',b.textContent===mood));
 }
+const moodCycle=['idle','thinking','happy','idle','waiting','idle','error','idle','idle','idle'];
+let moodIdx=0;
+const moodTimer=setInterval(()=>{moodIdx=(moodIdx+1)%moodCycle.length;setMood(moodCycle[moodIdx]);},2800);
+document.querySelectorAll('.mpill').forEach(b=>b.addEventListener('click',()=>clearInterval(moodTimer)));
 
-const cycle = ['idle','thinking','happy','idle','waiting','idle','error','idle','idle'];
-let ci = 0;
-setInterval(() => { ci = (ci+1)%cycle.length; setMood(cycle[ci]); }, 2800);
-
-// Stop auto when user clicks
-document.querySelectorAll('.mpill').forEach(b => {
-  b.addEventListener('click', () => { autoMood = false; });
+// ── COMMAND TABS ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.cmd-tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.cmd-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.cmd-panel').forEach(p=>{p.classList.remove('active');p.style.display='none';});
+    tab.classList.add('active');
+    const panel=document.getElementById('panel-'+tab.dataset.panel);
+    if(panel){
+      if(tab.dataset.panel==='all'){
+        panel.style.display='block';
+        panel.classList.add('active');
+      } else {
+        panel.style.display='grid';
+        panel.classList.add('active');
+      }
+    }
+  });
 });
 
-// ── SCROLL REVEAL ─────────────────────────────────────────────────────────────
-const ro = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (!e.isIntersecting) return;
+// ── SCROLL REVEAL ────────────────────────────────────────────────────────────
+const ro=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(!e.isIntersecting)return;
     e.target.classList.add('vis');
-    const kids = e.target.querySelectorAll('.feature,.pcard,.step,.cmd-row');
-    kids.forEach((k, i) => {
-      k.style.opacity = '0';
-      k.style.transform = 'translateY(14px)';
-      k.style.transition = 'none';
-      setTimeout(() => {
-        k.style.transition = 'opacity .45s ease, transform .45s ease';
-        k.style.opacity = '1';
-        k.style.transform = 'none';
-      }, i * 55);
+    const kids=e.target.querySelectorAll('.feature,.pcard,.qs-step,.cmd-row,.cmd-all-row,.vs-row,.plugin-feat');
+    kids.forEach((k,i)=>{
+      k.style.opacity='0';
+      k.style.transform='translateY(12px)';
+      k.style.transition='none';
+      setTimeout(()=>{
+        k.style.transition='opacity .4s ease,transform .4s ease';
+        k.style.opacity='1';
+        k.style.transform='none';
+      },i*45);
     });
   });
-}, { threshold: 0.08 });
-document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+},{threshold:0.06});
+document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
 
-// ── COPY ─────────────────────────────────────────────────────────────────────
-function cp(btn, text) {
-  navigator.clipboard.writeText(text).then(() => {
-    const orig = btn.textContent;
-    btn.textContent = 'copied!';
+// ── COPY ──────────────────────────────────────────────────────────────────────
+function cp(btn,text){
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.textContent;
+    btn.textContent='copied!';
     btn.classList.add('ok');
-    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1800);
+    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('ok');},1800);
   });
 }
 
-// ── GLITCH on h1 ─────────────────────────────────────────────────────────────
-const gwStyle = document.createElement('style');
-gwStyle.textContent = `.gw{position:relative;display:inline-block}.gw::before,.gw::after{content:attr(data-t);position:absolute;top:0;left:0;width:100%;height:100%;font-family:inherit;font-size:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit}.gw::before{color:var(--cyan);opacity:.45}.gw::after{color:var(--red);opacity:.25}`;
-document.head.appendChild(gwStyle);
-
-document.querySelectorAll('.gw').forEach(el => {
-  el.addEventListener('mouseenter', () => {
-    el.style.animation = 'glitch .35s steps(1) forwards';
-  });
-  el.addEventListener('animationend', () => { el.style.animation = ''; });
+// ── GLITCH ON H1 ─────────────────────────────────────────────────────────────
+const gs=document.createElement('style');
+gs.textContent=`.gw{position:relative;display:inline-block}.gw::before,.gw::after{content:attr(data-t);position:absolute;top:0;left:0;width:100%;height:100%;font-family:inherit;font-size:inherit;font-weight:inherit;letter-spacing:inherit;line-height:inherit;pointer-events:none}.gw::before{color:var(--cyan);opacity:.4}.gw::after{color:var(--red);opacity:.2}`;
+document.head.appendChild(gs);
+document.querySelectorAll('.gw').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{el.style.animation='glitch .4s steps(1) forwards';});
+  el.addEventListener('animationend',()=>{el.style.animation='';});
 });
-
-// ── CURSOR DOT ────────────────────────────────────────────────────────────────
-const dot = Object.assign(document.createElement('div'), {});
-dot.style.cssText = 'position:fixed;width:5px;height:5px;background:var(--yellow);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);mix-blend-mode:difference;transition:transform .1s';
-document.body.appendChild(dot);
-document.addEventListener('mousemove', e => { dot.style.left = e.clientX+'px'; dot.style.top = e.clientY+'px'; });
-document.addEventListener('mousedown', () => { dot.style.transform = 'translate(-50%,-50%) scale(2)'; });
-document.addEventListener('mouseup', () => { dot.style.transform = 'translate(-50%,-50%) scale(1)'; });
 </script>
 </body>
 </html>
