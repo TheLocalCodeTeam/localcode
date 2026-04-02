@@ -36,6 +36,10 @@
       "dest": "/install.html"
     },
     {
+      "src": "/docs.html",
+      "dest": "/docs.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }

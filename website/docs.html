@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Docs — Localcode</title>
+  <meta name="description" content="Documentation for Localcode — the open-source AI coding agent."/>
+  <link rel="icon" type="image/png" href="assets/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .docs-layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 60px);padding-top:60px}
+    .docs-sidebar{background:var(--bg-card);border-right:1px solid var(--border-subtle);padding:1.5rem 0;position:sticky;top:60px;height:calc(100vh - 60px);overflow-y:auto}
+    .docs-sidebar-section{margin-bottom:1.5rem}
+    .docs-sidebar-title{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);padding:0 1.5rem;margin-bottom:.5rem;font-weight:500}
+    .docs-sidebar-link{display:block;padding:.35rem 1.5rem;font-size:.85rem;color:var(--text-secondary);text-decoration:none;transition:all .15s;border-left:2px solid transparent}
+    .docs-sidebar-link:hover{color:var(--text);background:rgba(255,255,255,.03)}
+    .docs-sidebar-link.active{color:var(--white);border-left-color:var(--white);background:rgba(255,255,255,.05)}
+    .docs-content{padding:3rem 4rem;max-width:800px}
+    .docs-content h1{font-size:2rem;font-weight:800;margin-bottom:1rem;color:var(--white);letter-spacing:-.03em}
+    .docs-content h2{font-size:1.4rem;font-weight:700;margin:2.5rem 0 1rem;color:var(--white);letter-spacing:-.02em;border-bottom:1px solid var(--border-subtle);padding-bottom:.5rem}
+    .docs-content h3{font-size:1.1rem;font-weight:600;margin:1.5rem 0 .75rem;color:var(--white)}
+    .docs-content p{color:var(--text-secondary);line-height:1.8;margin-bottom:1rem;font-size:.95rem}
+    .docs-content code{background:var(--bg-card);padding:.15rem .4rem;border-radius:4px;font-family:var(--mono);font-size:.85rem;color:var(--text)}
+    .docs-content pre{background:var(--bg-card);border:1px solid var(--border-subtle);padding:1rem 1.25rem;border-radius:8px;overflow-x:auto;margin:1rem 0}
+    .docs-content pre code{background:none;padding:0;font-size:.82rem;line-height:1.7;color:var(--text-secondary)}
+    .docs-content ul,.docs-content ol{color:var(--text-secondary);line-height:1.8;margin-bottom:1rem;padding-left:1.5rem}
+    .docs-content li{margin-bottom:.3rem;font-size:.95rem}
+    .docs-content .callout{background:var(--bg-card);border:1px solid var(--border-subtle);border-left:3px solid var(--text-muted);padding:1rem 1.25rem;border-radius:6px;margin:1.5rem 0}
+    .docs-content .callout p{margin:0;font-size:.9rem}
+    .docs-content table{width:100%;border-collapse:collapse;margin:1.5rem 0}
+    .docs-content th,.docs-content td{text-align:left;padding:.6rem 1rem;border:1px solid var(--border-subtle);font-size:.85rem}
+    .docs-content th{background:var(--bg-card);color:var(--white);font-weight:600}
+    .docs-content td{color:var(--text-secondary)}
+    .docs-content a{color:var(--text);text-decoration:underline;text-underline-offset:3px}
+    .docs-content a:hover{color:var(--white)}
+    @media(max-width:1024px){.docs-layout{grid-template-columns:1fr}.docs-sidebar{display:none}.docs-content{padding:2rem 1.5rem}}
+  </style>
+</head>
+<body>
+<div class="hero-bg"></div>
+<div class="hero-glow"></div>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>Localcode</span>
+      <span class="nav-ver">v4.0.0</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="features.html">Features</a></li>
+      <li><a href="platforms.html">Platforms</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="docs.html" class="active">Docs</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a></li>
+      <li><a href="install.html" class="nav-cta">Install →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="docs-layout">
+  <aside class="docs-sidebar">
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-title">Getting Started</div>
+      <a href="#overview" class="docs-sidebar-link active">Overview</a>
+      <a href="#installation" class="docs-sidebar-link">Installation</a>
+      <a href="#quick-start" class="docs-sidebar-link">Quick Start</a>
+      <a href="#configuration" class="docs-sidebar-link">Configuration</a>
+    </div>
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-title">Core</div>
+      <a href="#providers" class="docs-sidebar-link">Providers</a>
+      <a href="#tools" class="docs-sidebar-link">Tools</a>
+      <a href="#commands" class="docs-sidebar-link">Commands</a>
+      <a href="#permissions" class="docs-sidebar-link">Permissions</a>
+    </div>
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-title">Agents</div>
+      <a href="#agents-overview" class="docs-sidebar-link">Overview</a>
+      <a href="#auto-dispatch" class="docs-sidebar-link">Auto-Dispatch</a>
+      <a href="#orchestration" class="docs-sidebar-link">Orchestration</a>
+      <a href="#nexus" class="docs-sidebar-link">NEXUS Pipeline</a>
+    </div>
+    <div class="docs-sidebar-section">
+      <div class="docs-sidebar-title">Advanced</div>
+      <a href="#plugins" class="docs-sidebar-link">Plugins</a>
+      <a href="#hooks" class="docs-sidebar-link">Hooks</a>
+      <a href="#mcp" class="docs-sidebar-link">MCP Servers</a>
+      <a href="#memory" class="docs-sidebar-link">Memory</a>
+      <a href="#vscode" class="docs-sidebar-link">VS Code Extension</a>
+      <a href="#desktop" class="docs-sidebar-link">Desktop App</a>
+    </div>
+  </aside>
+
+  <main class="docs-content">
+    <h1 id="overview">Overview</h1>
+    <p>Localcode is a full-featured AI coding agent that runs in your terminal, VS Code, or desktop app. It connects to any LLM provider (local or cloud), reads your codebase, edits files, runs commands, and iterates until the job is done.</p>
+    <div class="callout"><p><strong>Key features:</strong> 139 specialized agents, multi-agent orchestration, local LLM support with Ollama, plugin system, hooks, MCP servers, and VS Code extension.</p></div>
+
+    <h2 id="installation">Installation</h2>
+    <h3>From npm (recommended)</h3>
+    <pre><code>npm install -g @localcode/cli</code></pre>
+    <h3>From source</h3>
+    <pre><code>git clone https://github.com/thealxlabs/localcode.git
+cd localcode
+npm install
+npm run build
+npm link</code></pre>
+    <h3>Requirements</h3>
+    <ul>
+      <li>Node.js 18.0 or later</li>
+      <li>macOS, Linux, or WSL on Windows</li>
+      <li>Ollama (optional, for local models)</li>
+    </ul>
+
+    <h2 id="quick-start">Quick Start</h2>
+    <ol>
+      <li><strong>Install:</strong> <code>npm install -g @localcode/cli</code></li>
+      <li><strong>Launch:</strong> Run <code>localcode</code> in your terminal</li>
+      <li><strong>Choose provider:</strong> Pick Ollama for free local AI, or connect a cloud provider</li>
+      <li><strong>Start coding:</strong> Describe what you need — Localcode handles the rest</li>
+    </ol>
+
+    <h2 id="configuration">Configuration</h2>
+    <p>Localcode uses <code>~/.localcode/settings.json</code> for global config and <code>.localcode/settings.json</code> for project-specific config.</p>
+    <pre><code>{
+  "provider": {
+    "provider": "ollama",
+    "model": "qwen2.5-coder:7b",
+    "baseUrl": "http://localhost:11434",
+    "temperature": 0.3,
+    "maxTokens": 8192
+  },
+  "agentDispatch": {
+    "enabled": true,
+    "requireApproval": false,
+    "maxConcurrentAgents": 5,
+    "dispatchStrategy": "smart",
+    "qualityGate": true
+  }
+}</code></pre>
+
+    <h2 id="providers">Providers</h2>
+    <p>Localcode supports any OpenAI-compatible API endpoint:</p>
+    <table>
+      <tr><th>Provider</th><th>Setup</th><th>Local?</th></tr>
+      <tr><td>Ollama</td><td>Install Ollama, run <code>localcode</code></td><td>Yes</td></tr>
+      <tr><td>OpenAI</td><td>Set <code>OPENAI_API_KEY</code></td><td>No</td></tr>
+      <tr><td>Anthropic</td><td>Set <code>ANTHROPIC_API_KEY</code></td><td>No</td></tr>
+      <tr><td>Groq</td><td>Set <code>GROQ_API_KEY</code></td><td>No</td></tr>
+    </table>
+    <p>Switch providers mid-session with <code>/provider &lt;name&gt;</code>.</p>
+
+    <h2 id="tools">Tools</h2>
+    <p>Localcode has 10 built-in tools that agents use autonomously:</p>
+    <table>
+      <tr><th>Tool</th><th>Description</th></tr>
+      <tr><td><code>read_file</code></td><td>Read file contents with line numbers</td></tr>
+      <tr><td><code>write_file</code></td><td>Create or overwrite a file</td></tr>
+      <tr><td><code>patch_file</code></td><td>Edit part of a file (old_str → new_str)</td></tr>
+      <tr><td><code>delete_file</code></td><td>Delete a file</td></tr>
+      <tr><td><code>move_file</code></td><td>Move/rename a file</td></tr>
+      <tr><td><code>run_shell</code></td><td>Run any shell command</td></tr>
+      <tr><td><code>list_dir</code></td><td>List directory contents (recursive)</td></tr>
+      <tr><td><code>search_files</code></td><td>Grep-like search across the project</td></tr>
+      <tr><td><code>find_files</code></td><td>Find files by name pattern</td></tr>
+      <tr><td><code>git_operation</code></td><td>Run git commands</td></tr>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    <p>Type <code>/</code> to see all available commands. Key commands:</p>
+    <table>
+      <tr><th>Command</th><th>Description</th></tr>
+      <tr><td><code>/agent</code></td><td>Browse and activate agents</td></tr>
+      <tr><td><code>/agents</code></td><td>List all agents by category</td></tr>
+      <tr><td><code>/orchestrate</code></td><td>Run multi-agent pipeline</td></tr>
+      <tr><td><code>/nexus</code></td><td>Full NEXUS pipeline</td></tr>
+      <tr><td><code>/commit</code></td><td>Generate commit message</td></tr>
+      <tr><td><code>/provider</code></td><td>Switch provider</td></tr>
+      <tr><td><code>/model</code></td><td>Switch model</td></tr>
+      <tr><td><code>/clear</code></td><td>Clear conversation</td></tr>
+      <tr><td><code>/settings</code></td><td>Show current settings</td></tr>
+    </table>
+
+    <h2 id="permissions">Permissions</h2>
+    <p>Every file write, patch, or shell command asks for permission first. Configure per-tool and per-command pattern in settings:</p>
+    <pre><code>"permissions": {
+  "fileEdit": "allow",
+  "fileWrite": "allow",
+  "bash": "allow",
+  "bashPatterns": {
+    "git *": "allow",
+    "npm test*": "allow"
+  }
+}</code></pre>
+
+    <h2 id="agents-overview">Agents Overview</h2>
+    <p>Localcode comes with 139 specialized agents across engineering, testing, security, DevOps, design, marketing, product, and strategy. Each agent has deep domain expertise encoded in its system prompt.</p>
+
+    <h2 id="auto-dispatch">Auto-Dispatch</h2>
+    <p>Agents are automatically dispatched based on task context. No manual switching needed:</p>
+    <pre><code>User: "Fix the authentication bug"
+→ Auto-dispatches: security-engineer, backend-architect, testing-reality-checker
+
+User: "Optimize the database queries"
+→ Auto-dispatches: database-optimizer, performance-benchmarker</code></pre>
+    <p>Configure in settings: <code>agentDispatch.enabled</code>, <code>agentDispatch.requireApproval</code>.</p>
+
+    <h2 id="orchestration">Orchestration</h2>
+    <p>Run multi-agent pipelines with <code>/orchestrate "task" &lt;mode&gt;</code>:</p>
+    <ul>
+      <li><strong>Full:</strong> All phases, all agents, parallel execution</li>
+      <li><strong>Sprint:</strong> 4 phases, focused agents</li>
+      <li><strong>Micro:</strong> Quick task, minimal agents</li>
+    </ul>
+
+    <h2 id="nexus">NEXUS Pipeline</h2>
+    <p>The full NEXUS pipeline coordinates multiple agents through 7 phases:</p>
+    <ol>
+      <li><strong>Discovery</strong> — Requirements gathering, competitive analysis</li>
+      <li><strong>Strategy</strong> — Architecture decisions, technology selection</li>
+      <li><strong>Foundation</strong> — Project scaffolding, CI/CD setup</li>
+      <li><strong>Build</strong> — Core implementation with parallel agents</li>
+      <li><strong>Hardening</strong> — Security audit, performance optimization, testing</li>
+      <li><strong>Launch</strong> — Deployment, documentation, monitoring</li>
+      <li><strong>Operate</strong> — Ongoing maintenance, incident response</li>
+    </ol>
+    <p>Quality gates enforced between each phase. Dev↔QA loops running for all implementation tasks.</p>
+
+    <h2 id="plugins">Plugins</h2>
+    <p>Create custom commands by dropping <code>.js</code> files in <code>~/.localcode/plugins/</code>:</p>
+    <pre><code>// ~/.localcode/plugins/my-plugin.js
+export default {
+  name: 'my-plugin',
+  trigger: '/mycommand',
+  description: 'Does something useful',
+  async execute(args, context) {
+    context.addDisplay({ role: 'assistant', content: `Hello ${args}!` });
+  }
+};</code></pre>
+
+    <h2 id="hooks">Hooks</h2>
+    <p>Custom logic that runs before/after tool use:</p>
+    <pre><code>// ~/.localcode/hooks.json
+{
+  "PostToolUse": [{
+    "matcher": "write_file",
+    "hooks": [{ "type": "command", "command": "prettier --write $FILE_PATH" }]
+  }]
+}</code></pre>
+
+    <h2 id="mcp">MCP Servers</h2>
+    <p>Connect external tools via Model Context Protocol:</p>
+    <pre><code>{
+  "mcp": {
+    "enabled": true,
+    "servers": {
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
+      }
+    }
+  }
+}</code></pre>
+
+    <h2 id="memory">Memory</h2>
+    <p>Localcode maintains persistent memory across sessions:</p>
+    <ul>
+      <li><strong>Global memory:</strong> <code>~/.localcode.md</code> — Always loaded</li>
+      <li><strong>Project memory:</strong> <code>&lt;project&gt;/.localcode.md</code> — Loaded when cwd matches</li>
+      <li><strong>Auto-extraction:</strong> Patterns, conventions, and style guides automatically extracted</li>
+    </ul>
+
+    <h2 id="vscode">VS Code Extension</h2>
+    <p>The VS Code extension provides:</p>
+    <ul>
+      <li><strong>Chat Panel</strong> — Full conversation interface with streaming</li>
+      <li><strong>Agent View</strong> — Browse and activate 139 agents</li>
+      <li><strong>Session View</strong> — Live stats (tokens, cost, duration)</li>
+      <li><strong>Inline Edit</strong> — Select code, describe changes (<code>Cmd+K</code>)</li>
+      <li><strong>Completions</strong> — Inline code suggestions</li>
+      <li><strong>Status Bar</strong> — Live status, token count, cost estimate</li>
+    </ul>
+    <p>Install from the <a href="https://marketplace.visualstudio.com/items?itemName=thealxlabs.localcode">VS Code Marketplace</a> or build from source.</p>
+
+    <h2 id="desktop">Desktop App</h2>
+    <p>The Electron-based desktop app provides:</p>
+    <ul>
+      <li>Native window with custom title bar</li>
+      <li>Session management sidebar</li>
+      <li>Full chat interface with streaming</li>
+      <li>Agent activation and orchestration</li>
+      <li>Project directory selection</li>
+      <li>Application menu with shortcuts</li>
+    </ul>
+    <p>Build from source: <code>cd desktop && npm install && npm run dist</code></p>
+  </main>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <span><a href="index.html" style="color:var(--text-secondary)">Localcode</a> v4.0.0</span>
+    <a href="features.html">Features</a>
+    <a href="platforms.html">Platforms</a>
+    <a href="agents.html">Agents</a>
+    <a href="docs.html">Docs</a>
+    <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
+    <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
+  </div>
+  <span>Built by <a href="https://github.com/thealxlabs" target="_blank">TheAlxLabs</a> · MIT License</span>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

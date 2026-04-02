@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Platforms — Localcode</title>
-  <meta name="description" content="Use Localcode in your terminal, VS Code, JetBrains, desktop app, web, or Slack."/>
+  <meta name="description" content="Use Localcode in your terminal, VS Code, JetBrains, or desktop app."/>
   <link rel="icon" type="image/png" href="assets/favicon.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -30,7 +30,9 @@
       <li><a href="index.html">Home</a></li>
       <li><a href="features.html">Features</a></li>
       <li><a href="platforms.html" class="active">Platforms</a></li>
-      <li><a href="agents.html">Agents</a></li>
+      <li><a href="agents.html">Agents</a>
+    <a href="docs.html">Docs</a></li>
+      <li><a href="docs.html">Docs</a></li>
       <li><a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a></li>
       <li><a href="https://github.com/thealxlabs/localcode#readme" target="_blank">Docs</a></li>
       <li><a href="install.html" class="nav-cta">Install →</a></li>
@@ -51,9 +53,7 @@
     <div class="platform-tabs" id="platform-tabs">
       <button class="platform-tab active" data-tab="terminal">Terminal</button>
       <button class="platform-tab" data-tab="vscode">VS Code</button>
-      <button class="platform-tab" data-tab="desktop">Desktop</button>
-      <button class="platform-tab" data-tab="web">Web</button>
-      <button class="platform-tab" data-tab="slack">Slack</button>
+      <button class="platform-tab" data-tab="desktop">Desktop App</button>
     </div>
     <div class="platform-panels">
       <div class="platform-panel active" id="pp-terminal">
@@ -133,28 +133,6 @@
           </div>
         </div>
       </div>
-      <div class="platform-panel" id="pp-web">
-        <div class="pp-grid">
-          <div class="pp-info">
-            <h3>Web & Mobile</h3>
-            <p>Delegate tasks to Localcode from your browser or mobile app. Great for bug fixes, routine tasks, and kicking off work while on-the-go.</p>
-            <div class="pp-links"><a href="#" class="btn-p">Open in browser</a></div>
-          </div>
-          <div class="pp-demo">
-            <div class="phone-mockup">
-              <div class="phone-header"><span class="phone-time">9:41</span><span class="phone-title">Localcode</span></div>
-              <div class="phone-chat">
-                <div class="phone-msg user">Fix the login bug on mobile</div>
-                <div class="phone-msg assistant">I found the issue — the auth token wasn't being persisted in localStorage. I've fixed it and added a test.</div>
-                <div class="phone-msg tool">patch_file → src/auth/storage.ts</div>
-                <div class="phone-msg assistant">All tests pass. The fix is ready to merge.</div>
-              </div>
-              <div class="phone-input"><span>Ask Localcode...</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="platform-panel" id="pp-slack">
         <div class="pp-grid">
           <div class="pp-info">
             <h3>Slack Integration</h3>
@@ -203,6 +181,7 @@
     <a href="features.html">Features</a>
     <a href="platforms.html">Platforms</a>
     <a href="agents.html">Agents</a>
+    <a href="docs.html">Docs</a>
     <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
     <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
   </div>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com">
+  <title>Localcode</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#000;--bg-card:#0a0a0a;--bg-alt:#111;--text:#ededed;--text-secondary:#a1a1a1;--text-muted:#555;--border:#1a1a1a;--accent:#fff;--font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace}
+    html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+    #app{display:grid;grid-template-columns:240px 1fr;height:100vh}
+    #sidebar{background:var(--bg-card);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+    #sidebar-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+    #sidebar-header svg{width:20px;height:20px}
+    #sidebar-header span{font-weight:700;font-size:.9rem;color:var(--accent)}
+    #sidebar-header .version{font-size:.65rem;color:var(--text-muted);margin-left:auto}
+    #sidebar-actions{padding:8px}
+    .sidebar-btn{width:100%;padding:8px 12px;background:transparent;border:1px solid var(--border);color:var(--text-secondary);border-radius:6px;cursor:pointer;font-size:.8rem;font-family:var(--font);text-align:left;margin-bottom:4px;transition:all .15s;display:flex;align-items:center;gap:8px}
+    .sidebar-btn:hover{background:rgba(255,255,255,.05);border-color:#333;color:var(--text)}
+    .sidebar-btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600}
+    .sidebar-btn.primary:hover{opacity:.9}
+    #sidebar-sessions{flex:1;overflow-y:auto;padding:8px}
+    .session-item{padding:8px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;color:var(--text-muted);margin-bottom:2px;transition:all .15s}
+    .session-item:hover{background:rgba(255,255,255,.05);color:var(--text-secondary)}
+    .session-item.active{background:rgba(255,255,255,.08);color:var(--text)}
+    .session-item .session-title{font-weight:500;color:var(--text-secondary);margin-bottom:2px}
+    .session-item .session-meta{font-size:.7rem;color:var(--text-muted)}
+    #main{display:flex;flex-direction:column;overflow:hidden}
+    #titlebar{height:40px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);-webkit-app-region:drag;flex-shrink:0}
+    #titlebar .title{font-size:.8rem;color:var(--text-muted);margin-left:auto;-webkit-app-region:no-drag}
+    #titlebar .status{display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--text-muted);-webkit-app-region:no-drag;margin-right:12px}
+    #titlebar .status-dot{width:6px;height:6px;border-radius:50%;background:#28c840}
+    #chat{flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px}
+    .message{max-width:80%;padding:12px 16px;border-radius:12px;font-size:.9rem;line-height:1.6}
+    .message.user{background:rgba(255,255,255,.1);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px}
+    .message.assistant{background:var(--bg-card);color:var(--text-secondary);align-self:flex-start;border-bottom-left-radius:4px}
+    .message.tool{background:var(--bg-alt);color:var(--text-muted);font-family:var(--mono);font-size:.8rem;align-self:flex-start;border-bottom-left-radius:4px}
+    .message.system{background:transparent;color:var(--text-muted);font-size:.8rem;align-self:center;text-align:center}
+    #input-area{padding:12px 24px;border-top:1px solid var(--border);flex-shrink:0}
+    #input-container{display:flex;gap:8px;align-items:flex-end}
+    #input{flex:1;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:.9rem;font-family:var(--font);resize:none;outline:none;min-height:40px;max-height:120px;line-height:1.5;transition:border-color .15s}
+    #input:focus{border-color:#333}
+    #input::placeholder{color:var(--text-muted)}
+    #send{background:var(--accent);color:#000;border:none;border-radius:8px;padding:10px 16px;font-size:.85rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:opacity .15s;flex-shrink:0}
+    #send:hover{opacity:.9}
+    #send:disabled{opacity:.4;cursor:not-allowed}
+    #statusbar{height:24px;background:var(--bg-card);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:.7rem;color:var(--text-muted);gap:16px;flex-shrink:0}
+    #statusbar .status-item{display:flex;align-items:center;gap:4px}
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:#222;border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:#333}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="sidebar">
+      <div id="sidebar-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span>Localcode</span>
+        <span class="version">v4.0.0</span>
+      </div>
+      <div id="sidebar-actions">
+        <button class="sidebar-btn primary" id="new-session-btn">+ New Session</button>
+        <button class="sidebar-btn" id="select-dir-btn">📁 Open Project</button>
+        <button class="sidebar-btn" id="activate-agent-btn">🤖 Activate Agent</button>
+        <button class="sidebar-btn" id="orchestrate-btn">🌐 Orchestrate</button>
+      </div>
+      <div id="sidebar-sessions">
+        <div class="session-item active">
+          <div class="session-title">New Session</div>
+          <div class="session-meta">Just now · ollama</div>
+        </div>
+      </div>
+    </div>
+    <div id="main">
+      <div id="titlebar">
+        <div class="status"><span class="status-dot"></span><span>Connected</span></div>
+        <div class="title">Localcode — ~/project</div>
+      </div>
+      <div id="chat">
+        <div class="message system">Welcome to Localcode v4.0.0. 139 agents ready. How can I help?</div>
+      </div>
+      <div id="input-area">
+        <div id="input-container">
+          <textarea id="input" placeholder="Ask Localcode anything..." rows="1"></textarea>
+          <button id="send">Send</button>
+        </div>
+      </div>
+      <div id="statusbar">
+        <span class="status-item">◉ ollama</span>
+        <span class="status-item">qwen2.5-coder:7b</span>
+        <span class="status-item">0 tokens</span>
+        <span class="status-item" style="margin-left:auto">139 agents</span>
+      </div>
+    </div>
+  </div>
+  <script>
+    const chat=document.getElementById('chat');
+    const input=document.getElementById('input');
+    const sendBtn=document.getElementById('send');
+
+    function addMessage(role,text){
+      const el=document.createElement('div');
+      el.className='message '+role;
+      el.textContent=text;
+      chat.appendChild(el);
+      chat.scrollTop=chat.scrollHeight;
+    }
+
+    sendBtn.addEventListener('click',async()=>{
+      const text=input.value.trim();
+      if(!text)return;
+      addMessage('user',text);
+      input.value='';
+      sendBtn.disabled=true;
+      try{
+        if(window.localcode){
+          await window.localcode.sendMessage(text);
+        }
+        setTimeout(()=>{
+          addMessage('assistant','Processing your request...');
+          sendBtn.disabled=false;
+        },500);
+      }catch(e){
+        addMessage('assistant','Error: '+e.message);
+        sendBtn.disabled=false;
+      }
+    });
+
+    input.addEventListener('keydown',(e)=>{
+      if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendBtn.click();}
+    });
+
+    input.addEventListener('input',()=>{
+      input.style.height='auto';
+      input.style.height=Math.min(input.scrollHeight,120)+'px';
+    });
+
+    document.getElementById('new-session-btn').addEventListener('click',()=>{
+      chat.innerHTML='';
+      addMessage('system','New session started. 139 agents ready.');
+    });
+
+    document.getElementById('select-dir-btn').addEventListener('click',async()=>{
+      if(window.localcode){
+        const dir=await window.localcode.selectDirectory();
+        if(dir)addMessage('system','Project opened: '+dir);
+      }
+    });
+
+    document.getElementById('activate-agent-btn').addEventListener('click',()=>{
+      addMessage('system','Agent picker would open here. Type /agent in chat.');
+    });
+
+    document.getElementById('orchestrate-btn').addEventListener('click',()=>{
+      addMessage('system','Orchestration mode. Type /orchestrate "task" in chat.');
+    });
+
+    if(window.localcode){
+      window.localcode.onOutput((data)=>{
+        try{
+          const msg=JSON.parse(data);
+          if(msg.type==='assistant')addMessage('assistant',msg.content);
+          if(msg.type==='tool')addMessage('tool',msg.content);
+        }catch{addMessage('assistant',data);}
+      });
+      window.localcode.onError((data)=>{addMessage('system','Error: '+data);});
+    }
+  </script>
+</body>
+</html>
