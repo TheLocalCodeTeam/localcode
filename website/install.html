@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Install — Localcode</title>
+  <meta name="description" content="Install Localcode in 30 seconds. Free with Ollama, or connect any cloud provider."/>
+  <link rel="icon" type="image/png" href="assets/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="hero-bg"></div>
+<div class="hero-glow"></div>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>Localcode</span>
+      <span class="nav-ver">v4.0.0</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="features.html">Features</a></li>
+      <li><a href="platforms.html">Platforms</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode#readme" target="_blank">Docs</a></li>
+      <li><a href="install.html" class="nav-cta">Install →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <div class="section-label">Install</div>
+    <h1>Get Localcode</h1>
+    <p class="page-sub">Open source. Local-first. 139 agents. Ready in 30 seconds.</p>
+  </div>
+</div>
+
+<section class="install-detail">
+  <div class="container">
+    <div class="install-methods">
+      <div class="imethod">
+        <div class="imethod-label">Global install (recommended)</div>
+        <div class="ibox">
+          <span class="icmd">npm install -g @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npm install -g @localcode/cli')">copy</button>
+        </div>
+        <div class="imethod-note">Installs the <code>localcode</code> command globally.</div>
+      </div>
+      <div class="imethod">
+        <div class="imethod-label">No install needed</div>
+        <div class="ibox">
+          <span class="icmd">npx @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npx @localcode/cli')">copy</button>
+        </div>
+        <div class="imethod-note">Runs directly via npx. No global install required.</div>
+      </div>
+    </div>
+
+    <div class="install-steps">
+      <div class="install-step">
+        <div class="is-num">1</div>
+        <div class="is-content">
+          <h3>Install</h3>
+          <p>Run the install command above. Node.js 18+ is required.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="is-num">2</div>
+        <div class="is-content">
+          <h3>Launch</h3>
+          <p>Run <code>localcode</code> in your terminal. The setup wizard will guide you through provider selection.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="is-num">3</div>
+        <div class="is-content">
+          <h3>Choose your provider</h3>
+          <p>Pick Ollama for free local AI, or connect OpenAI, Anthropic, or Groq with your API key.</p>
+        </div>
+      </div>
+      <div class="install-step">
+        <div class="is-num">4</div>
+        <div class="is-content">
+          <h3>Start coding</h3>
+          <p>Describe what you need. Localcode reads your codebase, makes changes, runs tests, and ships.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="providers-list">
+      <h3>Supported providers</h3>
+      <div class="provider-cards">
+        <div class="provider-card">
+          <div class="pc-icon">◉</div>
+          <h4>Ollama</h4>
+          <p>Free · Fully local · No API key</p>
+          <span class="pc-models">qwen2.5-coder · llama3.2 · deepseek-r1 · mistral</span>
+        </div>
+        <div class="provider-card">
+          <div class="pc-icon">✶</div>
+          <h4>OpenAI</h4>
+          <p>OPENAI_API_KEY</p>
+          <span class="pc-models">gpt-4o · gpt-4o-mini · o1 · o3</span>
+        </div>
+        <div class="provider-card">
+          <div class="pc-icon">◆</div>
+          <h4>Anthropic</h4>
+          <p>ANTHROPIC_API_KEY</p>
+          <span class="pc-models">claude-sonnet-4 · claude-opus-4 · claude-haiku-4</span>
+        </div>
+        <div class="provider-card">
+          <div class="pc-icon">◈</div>
+          <h4>Groq</h4>
+          <p>GROQ_API_KEY · Free tier</p>
+          <span class="pc-models">llama-3.3-70b · mixtral-8x7b · gemma2-9b</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="req-row">
+      <span class="req-item">Node.js 18+</span>
+      <span class="req-item">macOS · Linux · WSL</span>
+      <span class="req-item">MIT License</span>
+      <span class="req-item">TypeScript source</span>
+      <span class="req-item">0 telemetry</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-links">
+    <span><a href="index.html" style="color:var(--text-secondary)">Localcode</a> v4.0.0</span>
+    <a href="features.html">Features</a>
+    <a href="platforms.html">Platforms</a>
+    <a href="agents.html">Agents</a>
+    <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
+    <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
+  </div>
+  <span>Built by <a href="https://github.com/thealxlabs" target="_blank">TheAlxLabs</a> · MIT License</span>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Features — Localcode</title>
+  <meta name="description" content="Explore Localcode's features: 139 agents, multi-agent orchestration, local LLM support, plugins, hooks, MCP, and more."/>
+  <link rel="icon" type="image/png" href="assets/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="hero-bg"></div>
+<div class="hero-glow"></div>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>Localcode</span>
+      <span class="nav-ver">v4.0.0</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="features.html" class="active">Features</a></li>
+      <li><a href="platforms.html">Platforms</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode#readme" target="_blank">Docs</a></li>
+      <li><a href="install.html" class="nav-cta">Install →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h1>Everything you need.<br/>Nothing you don't.</h1>
+    <p class="page-sub">Localcode packs every feature a serious developer needs — plus the things cloud assistants will never give you.</p>
+  </div>
+</div>
+
+<section class="feature-detail">
+  <div class="container">
+    <div class="fd-grid">
+      <div class="fd-card">
+        <div class="fd-icon">◉</div>
+        <h3>100% local with Ollama</h3>
+        <p>Run any Ollama model — qwen2.5-coder, deepseek-r1, llama3.2, and more. No API key. No cloud. Your code never leaves your machine. Free forever.</p>
+        <span class="ftag">Free forever</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">🤖</div>
+        <h3>139 specialized agents</h3>
+        <p>From AI engineers to security auditors, database optimizers to DevOps automators. Each agent has deep domain expertise and activates automatically based on task context.</p>
+        <span class="ftag">Auto-dispatch</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">🌐</div>
+        <h3>Multi-agent orchestration</h3>
+        <p>NEXUS pipeline coordinates multiple agents through 7 phases with quality gates, Dev↔QA loops, parallel execution, and automatic retries. Full/sprint/micro modes.</p>
+        <span class="ftag">NEXUS</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⟳</div>
+        <h3>Switch provider live</h3>
+        <p>Use /provider mid-session. Switch from local Ollama to GPT-4o to Claude without restarting. API keys stored per-provider and auto-loaded from environment variables.</p>
+        <span class="ftag">Multi-provider</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⧉</div>
+        <h3>Plugin system</h3>
+        <p>Drop a .js file in ~/.localcode/plugins/ to add custom slash commands. Full access to conversation context and tools. Zero boilerplate — just name, description, and run function.</p>
+        <span class="ftag">Extensible</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⚡</div>
+        <h3>Hooks</h3>
+        <p>PreToolUse, PostToolUse, and Notification hooks — run custom scripts before or after any tool call. Wire up linters, formatters, notifications, or anything else.</p>
+        <span class="ftag">Automation</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">◈</div>
+        <h3>Memory files</h3>
+        <p>.localcode.md for global memory, .localcode.md in project root for project context. Both loaded automatically at startup. Persistent context across sessions.</p>
+        <span class="ftag">Persistent context</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⬡</div>
+        <h3>MCP servers</h3>
+        <p>Connect Model Context Protocol servers — both stdio and HTTP transports supported. Give Localcode access to your databases, APIs, and external tools.</p>
+        <span class="ftag">Extensible</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⊟</div>
+        <h3>Vision input</h3>
+        <p>/image path/to/screenshot.png — works with Claude, GPT-4o, and Ollama llava. Describe UI, debug layouts, analyze diagrams.</p>
+        <span class="ftag">Multimodal</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⎇</div>
+        <h3>TF-IDF codebase search</h3>
+        <p>/index builds a full semantic index of your project. Ask Localcode to find relevant files without passing your entire codebase as context.</p>
+        <span class="ftag">Smart context</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">⚿</div>
+        <h3>Permission prompts</h3>
+        <p>Every file write, patch, or shell command asks first. Press y, n, or a (allow all). Full control, always. Configurable per-tool and per-command pattern.</p>
+        <span class="ftag">Safety</span>
+      </div>
+      <div class="fd-card">
+        <div class="fd-icon">🔒</div>
+        <h3>Budget guard & safe mode</h3>
+        <p>Set a USD budget limit — auto-switches to local Ollama when hit. Safe mode with git stash before edits and auto-revert on test failure.</p>
+        <span class="ftag">Protection</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="install">
+  <div class="inner reveal">
+    <div class="section-label" style="justify-content:center">Get started</div>
+    <h2 style="font-size:clamp(2rem,5vw,3.2rem)">Ready to try it?</h2>
+    <div class="install-methods">
+      <div class="imethod">
+        <div class="imethod-label">Global install</div>
+        <div class="ibox">
+          <span class="icmd">npm install -g @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npm install -g @localcode/cli')">copy</button>
+        </div>
+      </div>
+      <div class="imethod">
+        <div class="imethod-label">No install</div>
+        <div class="ibox">
+          <span class="icmd">npx @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npx @localcode/cli')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <span><a href="index.html" style="color:var(--text-secondary)">Localcode</a> v4.0.0</span>
+    <a href="features.html">Features</a>
+    <a href="platforms.html">Platforms</a>
+    <a href="agents.html">Agents</a>
+    <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
+    <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
+  </div>
+  <span>Built by <a href="https://github.com/thealxlabs" target="_blank">TheAlxLabs</a> · MIT License</span>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>

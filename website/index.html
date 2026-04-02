@@ -3,638 +3,60 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LocalCode — Local-first AI Coding Assistant</title>
-  <meta name="description" content="LocalCode v4.0.0 — a terminal AI coding assistant. Free with Ollama. Multi-provider. 30+ commands. Open source MIT. Built by TheLocalCodeTeam, co-piloted by Nyx."/>
-  <meta property="og:title" content="LocalCode — Local-first AI Coding Assistant"/>
-  <meta property="og:description" content="Free with Ollama. Multi-provider. 30+ slash commands. Open source MIT."/>
+  <title>Localcode — AI Coding Agent by TheAlxLabs</title>
+  <meta name="description" content="The open-source AI coding agent with 139 specialized agents, multi-agent orchestration, local LLM support, and full tool execution."/>
+  <link rel="icon" type="image/png" href="assets/favicon.png"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-  <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{
-      --bg:#000000;
-      --bg-card:#0a0a0a;
-      --bg-alt:#0f0f0f;
-      --text:#ededed;
-      --text-secondary:#a1a1a1;
-      --text-muted:#555;
-      --border-subtle:#1a1a1a;
-      --border:#222;
-      --white:#ffffff;
-      --font:'Inter',system-ui,-apple-system,sans-serif;
-      --mono:'Geist Mono','JetBrains Mono','Fira Code',monospace;
-    }
-    html{scroll-behavior:smooth;color-scheme:dark}
-    body{
-      background:var(--bg);
-      color:var(--text);
-      font-family:var(--font);
-      overflow-x:hidden;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
-    body::after{
-      content:'';
-      position:fixed;
-      inset:0;
-      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events:none;
-      z-index:9999;
-    }
-    ::selection{background:rgba(255,255,255,0.15);color:var(--white)}
-
-    /* NAV */
-    nav{
-      position:fixed;top:0;left:0;right:0;z-index:500;
-      display:flex;justify-content:space-between;align-items:center;
-      padding:0 2rem;height:60px;
-      border-bottom:1px solid var(--border-subtle);
-      background:rgba(0,0,0,0.85);
-      backdrop-filter:blur(20px);
-      -webkit-backdrop-filter:blur(20px);
-      transition:border-color .3s;
-    }
-    nav.scrolled{border-bottom-color:var(--border)}
-    .nav-logo{
-      font-family:var(--font);font-weight:700;font-size:.95rem;
-      color:var(--white);text-decoration:none;letter-spacing:-.03em;
-      display:flex;align-items:center;gap:.4rem;
-    }
-    .nav-logo-cat{color:var(--text-muted);font-family:var(--mono);font-size:.75rem;font-weight:400}
-    .nav-ver{font-size:.65rem;color:#333;letter-spacing:.04em;font-weight:400}
-    .nav-links{display:flex;gap:0;list-style:none;align-items:center}
-    .nav-links a{
-      color:var(--text-muted);text-decoration:none;
-      font-size:.8rem;font-weight:400;
-      padding:.4rem .9rem;
-      transition:color .15s;
-    }
-    .nav-links a:hover{color:var(--text)}
-    .nav-cta{
-      background:var(--white)!important;color:#000!important;
-      padding:.4rem 1rem!important;font-weight:600!important;
-      border-radius:6px;
-      transition:opacity .15s,box-shadow .15s!important;
-    }
-    .nav-cta:hover{opacity:.9;box-shadow:0 0 20px rgba(255,255,255,0.1)!important}
-
-    /* HERO */
-    #hero{
-      min-height:100vh;
-      display:grid;grid-template-columns:1fr 1fr;
-      align-items:center;
-      padding:7rem 2.5rem 4rem;
-      gap:5rem;
-      position:relative;
-      overflow:hidden;
-      max-width:1200px;margin:0 auto;
-    }
-    .hero-bg{
-      position:fixed;inset:0;
-      background-image:radial-gradient(circle,#222 1px,transparent 1px);
-      background-size:32px 32px;
-      opacity:.4;
-      pointer-events:none;z-index:0;
-    }
-    .hero-glow{
-      position:fixed;inset:0;
-      background:radial-gradient(ellipse 60% 40% at 50% 50%,rgba(255,255,255,0.04) 0%,transparent 60%);
-      pointer-events:none;z-index:0;
-    }
-    .hero-left{position:relative;z-index:1}
-    .hero-badge{
-      display:inline-flex;align-items:center;gap:.5rem;
-      font-size:.7rem;font-weight:500;letter-spacing:.04em;
-      color:var(--text-muted);
-      border:1px solid var(--border-subtle);
-      padding:.3rem .85rem;border-radius:100px;
-      margin-bottom:1.8rem;
-      opacity:0;transform:translateY(8px);
-      animation:fadeUp .5s .1s forwards;
-    }
-    .hero-badge-dot{width:5px;height:5px;background:#3d3d3d;border-radius:50%}
-    h1{
-      font-family:var(--font);
-      font-size:clamp(3rem,6vw,5.5rem);
-      font-weight:900;
-      line-height:.95;
-      letter-spacing:-.04em;
-      color:var(--white);
-      margin-bottom:1.4rem;
-      opacity:0;transform:translateY(16px);
-      animation:fadeUp .6s .2s forwards;
-    }
-    .hero-desc{
-      font-size:1rem;line-height:1.7;
-      color:var(--text-secondary);
-      max-width:520px;
-      margin-bottom:2.2rem;
-      font-weight:400;
-      opacity:0;transform:translateY(16px);
-      animation:fadeUp .6s .32s forwards;
-    }
-    .hero-actions{
-      display:flex;gap:.75rem;flex-wrap:wrap;
-      opacity:0;transform:translateY(16px);
-      animation:fadeUp .6s .42s forwards;
-      margin-bottom:3rem;
-    }
-    .hero-stats{
-      display:flex;gap:2.5rem;
-      opacity:0;animation:fadeUp .6s .54s forwards;
-      padding-top:2rem;border-top:1px solid var(--border-subtle);
-    }
-    .hero-stat .num{
-      font-family:var(--font);font-size:1.5rem;font-weight:700;
-      color:var(--white);line-height:1;letter-spacing:-.03em;
-    }
-    .hero-stat .lbl{font-size:.75rem;color:var(--text-muted);margin-top:.3rem;font-weight:400}
-
-    /* BUTTONS */
-    .btn-p{
-      background:var(--white);color:#000;
-      font-family:var(--font);font-size:.875rem;font-weight:600;
-      padding:.65rem 1.35rem;border:none;border-radius:6px;
-      cursor:pointer;text-decoration:none;
-      display:inline-flex;align-items:center;gap:.4rem;
-      transition:opacity .15s,box-shadow .15s,transform .1s;
-    }
-    .btn-p:hover{opacity:.92;box-shadow:0 0 30px rgba(255,255,255,0.08);transform:translateY(-1px)}
-    .btn-s{
-      background:transparent;color:var(--text);
-      font-family:var(--font);font-size:.875rem;font-weight:500;
-      padding:.65rem 1.35rem;border:1px solid #333;border-radius:6px;
-      cursor:pointer;text-decoration:none;
-      display:inline-flex;align-items:center;gap:.4rem;
-      transition:border-color .15s,color .15s,transform .1s;
-    }
-    .btn-s:hover{border-color:#555;color:var(--white);transform:translateY(-1px)}
-
-    /* HERO TERMINAL */
-    .hero-right{
-      position:relative;z-index:1;
-      opacity:0;transform:translateX(20px);
-      animation:fadeLeft .7s .45s forwards;
-    }
-    .terminal{
-      background:#000;
-      border:1px solid var(--border-subtle);
-      border-radius:8px;
-      overflow:hidden;
-    }
-    .tbar{
-      background:#0a0a0a;
-      padding:.65rem 1rem;
-      display:flex;align-items:center;gap:.45rem;
-      border-bottom:1px solid var(--border-subtle);
-    }
-    .tdot{width:12px;height:12px;border-radius:50%}
-    .tdot:nth-child(1){background:#ff5f57}
-    .tdot:nth-child(2){background:#febc2e}
-    .tdot:nth-child(3){background:#28c840}
-    .ttitle{
-      margin-left:auto;margin-right:auto;
-      font-family:var(--mono);font-size:.65rem;
-      color:#333;letter-spacing:.04em;
-    }
-    .tbody{
-      padding:1rem 1.2rem;
-      font-family:var(--mono);font-size:.72rem;
-      line-height:1.85;min-height:340px;max-height:340px;
-      overflow:hidden;
-    }
-    .trow{display:flex;gap:.5rem;min-height:1.3em;flex-wrap:wrap}
-    .tnyx-header{
-      display:flex;gap:1rem;margin-bottom:.7rem;
-      padding-bottom:.7rem;border-bottom:1px solid var(--border-subtle);
-    }
-    .tnyx-art{white-space:pre;line-height:1.3;color:var(--text-secondary);font-size:.8rem;flex-shrink:0}
-    .tnyx-info{display:flex;flex-direction:column;justify-content:center;gap:.05rem;font-size:.68rem}
-    .tw{color:var(--text)}.tg{color:#444}.tl{color:#888}.td{color:var(--text-muted)}
-    .cursor{
-      display:inline-block;width:6px;height:.85em;
-      background:var(--text);vertical-align:text-bottom;
-      animation:blink 1s step-end infinite;
-    }
-    @keyframes blink{50%{opacity:0}}
-    .replay-btn{
-      position:absolute;bottom:.7rem;right:.7rem;
-      background:transparent;border:1px solid var(--border);
-      color:var(--text-muted);font-family:var(--mono);font-size:.6rem;
-      padding:.25rem .6rem;border-radius:4px;
-      cursor:pointer;transition:all .15s;z-index:2;
-    }
-    .replay-btn:hover{border-color:#555;color:var(--text)}
-
-    /* TICKER */
-    .ticker-wrap{
-      overflow:hidden;
-      border-top:1px solid var(--border-subtle);
-      border-bottom:1px solid var(--border-subtle);
-      padding:.6rem 0;
-    }
-    .ticker{display:flex;gap:3.5rem;width:max-content;animation:ticker 30s linear infinite}
-    .ticker:hover{animation-play-state:paused}
-    .ticker-item{
-      white-space:nowrap;font-size:.72rem;font-weight:400;
-      letter-spacing:.04em;color:#2a2a2a;
-      display:flex;align-items:center;gap:.6rem;
-    }
-    .ticker-item::before{content:'·';color:#333}
-    @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-
-    /* SECTION BASE */
-    .section-wrap{padding:6rem 2.5rem;max-width:1200px;margin:0 auto}
-    .section-label{
-      font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;
-      color:var(--text-muted);margin-bottom:.7rem;font-weight:500;
-    }
-    h2{
-      font-family:var(--font);
-      font-size:clamp(1.75rem,3.5vw,2.75rem);
-      font-weight:800;letter-spacing:-.035em;line-height:1.1;
-      color:var(--white);margin-bottom:.75rem;
-    }
-    .section-sub{
-      color:var(--text-muted);font-size:.9rem;line-height:1.75;
-      max-width:520px;margin-bottom:3rem;font-weight:400;
-    }
-
-    /* REVEAL */
-    .reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
-    .reveal.vis{opacity:1;transform:none}
-
-    /* QUICK START */
-    #quickstart{background:var(--bg-alt);border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)}
-    .qs-grid{
-      display:grid;grid-template-columns:repeat(4,1fr);
-      gap:0;border:1px solid var(--border-subtle);
-      border-radius:8px;overflow:hidden;margin-top:2.5rem;
-    }
-    .qs-step{
-      padding:1.8rem 1.5rem;border-right:1px solid var(--border-subtle);
-      position:relative;overflow:hidden;
-      transition:background .2s;cursor:default;
-      background:var(--bg-card);
-    }
-    .qs-step:last-child{border-right:none}
-    .qs-step:hover{background:#0e0e0e}
-    .qs-num{
-      font-family:var(--font);font-size:2.5rem;font-weight:800;
-      color:#1a1a1a;line-height:1;margin-bottom:.8rem;
-      letter-spacing:-.04em;
-    }
-    .qs-step h3{font-size:.9rem;font-weight:600;margin-bottom:.4rem;color:var(--white)}
-    .qs-step p{font-size:.8rem;line-height:1.75;color:var(--text-muted);font-weight:400}
-    .qs-step code{color:var(--text-secondary);font-family:var(--mono);font-size:.78rem}
-
-    /* FEATURES */
-    .features-grid{
-      display:grid;grid-template-columns:repeat(3,1fr);
-      gap:0;border:1px solid var(--border-subtle);
-      border-radius:8px;overflow:hidden;
-    }
-    .feature{
-      padding:1.8rem;border-right:1px solid var(--border-subtle);
-      border-bottom:1px solid var(--border-subtle);
-      position:relative;overflow:hidden;
-      transition:background .2s;
-      background:var(--bg-card);
-    }
-    .feature:nth-child(3n){border-right:none}
-    .feature:nth-last-child(-n+3){border-bottom:none}
-    .feature:hover{background:#0e0e0e}
-    .feature-icon{font-size:1.1rem;margin-bottom:.8rem;display:block;color:var(--text)}
-    .feature h3{font-size:.9rem;font-weight:600;margin-bottom:.4rem;color:var(--white)}
-    .feature p{font-size:.8rem;line-height:1.75;color:var(--text-muted)}
-    .feature p code{color:var(--text-secondary);font-family:var(--mono);font-size:.78rem}
-    .ftag{
-      display:inline-block;font-size:.65rem;font-weight:500;letter-spacing:.06em;
-      text-transform:uppercase;color:var(--text-muted);
-      border:1px solid var(--border-subtle);
-      padding:.15rem .5rem;border-radius:4px;margin-top:.7rem;
-    }
-    .feature-new-badge{
-      position:absolute;top:.85rem;right:.85rem;
-      font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;
-      color:#444;border:1px solid var(--border-subtle);
-      padding:.08rem .38rem;border-radius:4px;
-    }
-
-    /* PROVIDERS */
-    #providers{background:var(--bg-alt);border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)}
-    .providers-grid{
-      display:grid;grid-template-columns:repeat(4,1fr);
-      gap:0;border:1px solid var(--border-subtle);
-      border-radius:8px;overflow:hidden;margin-top:2.5rem;
-    }
-    .pcard{
-      background:var(--bg-card);padding:1.8rem 1.5rem;
-      display:flex;flex-direction:column;gap:.5rem;
-      transition:background .2s;position:relative;overflow:hidden;
-      border-right:1px solid var(--border-subtle);
-    }
-    .pcard:last-child{border-right:none}
-    .pcard:hover{background:#0e0e0e}
-    .pcard-icon{font-size:1.4rem;margin-bottom:.2rem;line-height:1;color:var(--text)}
-    .pname{font-size:1rem;font-weight:700;color:var(--white);letter-spacing:-.02em}
-    .pmodels{font-size:.75rem;color:var(--text-muted);line-height:1.75;font-weight:400}
-    .pbadge{
-      display:inline-block;font-size:.65rem;font-weight:500;
-      letter-spacing:.04em;padding:.15rem .55rem;border-radius:4px;
-      margin-top:.1rem;align-self:flex-start;
-      border:1px solid var(--border-subtle);color:var(--text-muted);
-    }
-    .pcard-setup{font-size:.7rem;color:#333;margin-top:.2rem;font-family:var(--mono)}
-
-    /* COMMANDS */
-    #commands{background:var(--bg)}
-    .cmd-tabs{
-      display:flex;gap:0;
-      border-bottom:1px solid #333;
-      margin-top:2.5rem;overflow-x:auto;
-    }
-    .cmd-tab{
-      padding:.65rem 1.1rem;font-family:var(--font);font-size:.8rem;font-weight:400;
-      color:var(--text-muted);cursor:pointer;
-      border:none;border-bottom:2px solid transparent;
-      background:transparent;white-space:nowrap;
-      transition:color .15s,border-color .15s;
-      margin-bottom:-1px;
-    }
-    .cmd-tab:hover{color:var(--text)}
-    .cmd-tab.active{color:var(--white);font-weight:500;border-bottom-color:var(--white)}
-    .cmd-panels{border:1px solid var(--border-subtle);border-top:none;border-radius:0 0 8px 8px;overflow:hidden}
-    .cmd-panel{display:none;grid-template-columns:1fr 1fr;gap:0}
-    .cmd-panel.active{display:grid}
-    .cmd-list{border-right:1px solid var(--border-subtle)}
-    .cmd-row{
-      padding:.8rem 1.1rem;
-      display:grid;grid-template-columns:130px 1fr auto;
-      gap:.8rem;align-items:center;
-      transition:background .15s;cursor:default;
-      border-bottom:1px solid #0d0d0d;
-    }
-    .cmd-row:last-child{border-bottom:none}
-    .cmd-row:hover{background:rgba(255,255,255,0.02)}
-    .cmd-trigger{color:var(--text);font-size:.78rem;font-family:var(--mono);font-weight:500}
-    .cmd-desc{font-size:.78rem;color:var(--text-muted);line-height:1.5;font-weight:400}
-    .cmd-cat{font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;color:#2a2a2a;white-space:nowrap;font-weight:500}
-    .cmd-row:hover .cmd-cat{color:#3a3a3a}
-    .cmd-demo-pane{padding:1.5rem;background:var(--bg-card);display:flex;flex-direction:column;gap:.9rem}
-    .cmd-demo-title{font-size:.875rem;font-weight:600;color:var(--white)}
-    .cmd-demo-desc{font-size:.8rem;color:var(--text-muted);line-height:1.75;font-weight:400}
-    .cmd-demo-term{
-      background:var(--bg);border:1px solid var(--border-subtle);
-      padding:.85rem 1rem;border-radius:6px;
-      font-family:var(--mono);font-size:.72rem;line-height:1.8;
-    }
-    .cmd-all-grid{
-      display:grid;grid-template-columns:1fr 1fr;
-      gap:1px;background:var(--border-subtle);
-      border:1px solid var(--border-subtle);
-      border-radius:6px;overflow:hidden;
-      margin-top:1rem;
-    }
-    .cmd-all-row{
-      background:var(--bg);padding:.7rem 1rem;
-      display:grid;grid-template-columns:120px 1fr auto;
-      gap:.8rem;align-items:center;transition:background .15s;
-    }
-    .cmd-all-row:hover{background:rgba(255,255,255,0.02)}
-
-    /* PLUGIN SECTION */
-    #plugins{background:var(--bg-alt);border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)}
-    .plugin-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;margin-top:2.5rem}
-    .plugin-code{
-      background:var(--bg-card);border:1px solid var(--border-subtle);
-      padding:1.4rem;border-radius:8px;
-      font-family:var(--mono);font-size:.75rem;line-height:1.9;
-      position:relative;
-    }
-    .plugin-code::before{
-      content:'plugin.js';position:absolute;top:.6rem;right:.9rem;
-      font-size:.65rem;color:#333;letter-spacing:.04em;
-      font-family:var(--mono);
-    }
-    .pk{color:var(--text-secondary)}.ps{color:var(--text)}.pf{color:var(--text)}.pc{color:#444}
-    .plugin-features{display:flex;flex-direction:column;gap:1rem}
-    .plugin-feat{display:flex;gap:.9rem;align-items:flex-start}
-    .plugin-feat-icon{color:var(--text-muted);flex-shrink:0;font-size:.9rem;margin-top:.15rem}
-    .plugin-feat h4{font-size:.875rem;font-weight:600;margin-bottom:.2rem;color:var(--white)}
-    .plugin-feat p{font-size:.8rem;color:var(--text-muted);line-height:1.7;font-weight:400}
-
-    /* NYX */
-    #nyx{background:var(--bg-alt);border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle)}
-    #nyx .inner{max-width:1200px;margin:0 auto;padding:6rem 2.5rem;display:grid;grid-template-columns:260px 1fr;gap:5rem;align-items:center}
-    .nyx-stage{display:flex;flex-direction:column;align-items:center;gap:1.5rem}
-    .nyx-big{
-      font-family:var(--mono);white-space:pre;line-height:1.3;
-      font-size:clamp(.9rem,2.2vw,1.5rem);color:var(--text-secondary);
-      text-align:center;transition:color .2s,opacity .15s,transform .15s;
-    }
-    .mood-pills{display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center}
-    .mpill{
-      background:transparent;border:1px solid var(--border-subtle);
-      color:var(--text-muted);font-family:var(--font);font-size:.75rem;
-      font-weight:400;padding:.3rem .75rem;border-radius:100px;
-      cursor:pointer;transition:all .15s;
-    }
-    .mpill:hover,.mpill.active{border-color:#444;color:var(--text);background:rgba(255,255,255,0.04)}
-    .nyx-desc h3{font-size:2rem;font-weight:800;margin-bottom:.7rem;letter-spacing:-.04em;color:var(--white)}
-    .nyx-desc p{color:var(--text-muted);font-size:.875rem;line-height:1.85;max-width:520px;margin-bottom:.7rem;font-weight:400}
-    .nyx-facts{
-      display:grid;grid-template-columns:1fr 1fr;
-      gap:1px;background:var(--border-subtle);
-      border:1px solid var(--border-subtle);border-radius:8px;
-      overflow:hidden;margin-top:1.8rem;
-    }
-    .nfact{background:var(--bg);padding:.9rem 1.1rem}
-    .nfact .nl{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.25rem;font-weight:500}
-    .nfact .nv{font-size:.8rem;color:var(--text);font-weight:400}
-    .coauthor-badge{
-      display:inline-flex;align-items:center;gap:.5rem;
-      border:1px solid var(--border-subtle);border-radius:6px;
-      padding:.35rem .85rem;margin-top:1rem;
-      font-size:.75rem;color:var(--text-muted);font-family:var(--mono);
-      background:var(--bg-card);
-    }
-
-    /* WHY */
-    #why{background:var(--bg)}
-    .vs-table{border:1px solid var(--border-subtle);border-radius:8px;overflow:hidden;margin-top:2.5rem}
-    .vs-header{
-      display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;
-      background:var(--bg-card);border-bottom:1px solid var(--border-subtle);
-    }
-    .vs-col-header{
-      padding:.8rem 1.1rem;font-size:.7rem;letter-spacing:.1em;
-      text-transform:uppercase;color:var(--text-muted);
-      border-right:1px solid var(--border-subtle);font-weight:500;
-    }
-    .vs-col-header:last-child{border-right:none}
-    .vs-col-header.lc{color:var(--white)}
-    .vs-row{
-      display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;
-      border-bottom:1px solid #0d0d0d;
-      transition:background .12s;
-    }
-    .vs-row:last-child{border-bottom:none}
-    .vs-row:hover{background:rgba(255,255,255,0.015)}
-    .vs-cell{
-      padding:.8rem 1.1rem;font-size:.8rem;color:var(--text-muted);
-      border-right:1px solid #0d0d0d;
-      display:flex;align-items:center;gap:.4rem;font-weight:400;
-    }
-    .vs-cell:last-child{border-right:none}
-    .vs-cell.feature-name{color:var(--text)}
-    .vs-cell.yes{color:var(--text)}
-    .vs-cell.no{color:#2a2a2a}
-    .vs-cell.partial{color:#666}
-    .vs-cell.lc-cell{background:rgba(255,255,255,0.015)}
-
-    /* INSTALL */
-    #install{text-align:center;padding:7rem 2.5rem;background:var(--bg-alt);border-top:1px solid var(--border-subtle)}
-    #install .inner{max-width:640px;margin:0 auto}
-    .install-methods{
-      display:grid;grid-template-columns:1fr 1fr;
-      gap:1px;background:var(--border-subtle);
-      border:1px solid var(--border-subtle);border-radius:8px;
-      overflow:hidden;margin:2rem auto;text-align:left;
-    }
-    .imethod{background:var(--bg-card);padding:1.5rem}
-    .imethod-label{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.85rem;font-weight:500}
-    .ibox{
-      background:var(--bg);border:1px solid var(--border-subtle);
-      padding:.7rem 1rem;border-radius:6px;
-      display:flex;align-items:center;gap:.9rem;margin-bottom:.6rem;
-    }
-    .ibox::before{content:'$';color:var(--text-muted);flex-shrink:0;font-family:var(--mono);font-size:.85rem}
-    .icmd{flex:1;font-size:.85rem;color:var(--text);font-family:var(--mono)}
-    .cpbtn{
-      background:transparent;border:1px solid var(--border);
-      color:var(--text-muted);font-family:var(--font);font-size:.7rem;font-weight:500;
-      padding:.25rem .6rem;border-radius:4px;cursor:pointer;
-      transition:all .15s;flex-shrink:0;
-    }
-    .cpbtn:hover{border-color:#555;color:var(--text)}
-    .cpbtn.ok{border-color:#555;color:var(--text)}
-    .imethod-note{font-size:.75rem;color:#333;line-height:1.6;font-weight:400}
-    .req-row{display:flex;justify-content:center;gap:1.5rem;margin-top:2rem;flex-wrap:wrap}
-    .req-item{font-size:.75rem;color:#333;display:flex;align-items:center;gap:.4rem;font-weight:400}
-    .req-item::before{content:'·';color:#3a3a3a}
-    .install-run{margin-top:2rem}
-    .install-run-label{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.75rem;font-weight:500}
-
-    /* FOOTER */
-    footer{
-      border-top:1px solid var(--border-subtle);
-      padding:1.6rem 2.5rem;
-      display:flex;justify-content:space-between;align-items:center;
-      font-size:.8rem;color:#333;flex-wrap:wrap;gap:1rem;
-    }
-    footer a{color:#444;text-decoration:none;transition:color .15s;font-weight:400}
-    footer a:hover{color:var(--text)}
-    .footer-links{display:flex;gap:2rem;align-items:center}
-    .mit-badge{
-      display:inline-flex;align-items:center;gap:.3rem;
-      border:1px solid var(--border-subtle);padding:.18rem .55rem;
-      border-radius:4px;font-size:.7rem;color:#333;
-      transition:all .15s;
-    }
-    .mit-badge:hover{border-color:#444;color:var(--text)!important}
-
-    /* ANIMATIONS */
-    @keyframes fadeUp{to{opacity:1;transform:none}}
-    @keyframes fadeLeft{to{opacity:1;transform:none}}
-
-    /* RESPONSIVE */
-    @media(max-width:1024px){
-      #hero{grid-template-columns:1fr;padding-top:6rem;max-width:100%}
-      .hero-right{display:none}
-      .qs-grid{grid-template-columns:1fr 1fr}
-      .qs-step:nth-child(2){border-right:none}
-      .qs-step:nth-child(3){border-top:1px solid var(--border-subtle)}
-      .features-grid{grid-template-columns:1fr 1fr}
-      .feature:nth-child(2n){border-right:none}
-      .feature:nth-child(3n){border-right:1px solid var(--border-subtle)}
-      .providers-grid{grid-template-columns:1fr 1fr}
-      .pcard:nth-child(2){border-right:none}
-      .pcard:nth-child(3){border-top:1px solid var(--border-subtle)}
-      #nyx .inner{grid-template-columns:1fr;padding:4rem 1.5rem;gap:3rem}
-      .nyx-facts{grid-template-columns:1fr}
-      .vs-header,.vs-row{grid-template-columns:1.4fr 1fr 1fr 1fr}
-      .cmd-panel.active{grid-template-columns:1fr}
-      .cmd-demo-pane{display:none}
-      .install-methods{grid-template-columns:1fr}
-      .plugin-grid{grid-template-columns:1fr;gap:2rem}
-    }
-    @media(max-width:768px){
-      nav{padding:.8rem 1.2rem}
-      .nav-links li:not(:last-child){display:none}
-      .section-wrap{padding:4rem 1.2rem}
-      #install{padding:5rem 1.2rem}
-      #nyx .inner{padding:4rem 1.2rem}
-      .features-grid{grid-template-columns:1fr}
-      .feature:nth-child(n){border-right:none}
-      .providers-grid{grid-template-columns:1fr}
-      .pcard{border-right:none!important;border-bottom:1px solid var(--border-subtle)}
-      .qs-grid{grid-template-columns:1fr}
-      .qs-step{border-right:none!important;border-bottom:1px solid var(--border-subtle)}
-      .qs-step:last-child{border-bottom:none}
-      .vs-header,.vs-row{grid-template-columns:1fr 1fr}
-      .vs-cell:nth-child(3),.vs-col-header:nth-child(3){display:none}
-      .vs-cell:nth-child(4),.vs-col-header:nth-child(4){display:none}
-      .cmd-all-grid{grid-template-columns:1fr}
-      .cmd-tabs{flex-wrap:nowrap}
-      footer{flex-direction:column;align-items:flex-start;gap:.7rem}
-      h1{font-size:2.8rem}
-    }
-  </style>
+  <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
 <div class="hero-bg"></div>
 <div class="hero-glow"></div>
 
-<!-- NAV -->
 <nav id="nav">
-  <a class="nav-logo" href="#">
-    <span>LocalCode</span>
-    <span class="nav-logo-cat">( ·.· )</span>
-    <span class="nav-ver">v4.0.0</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="#quickstart">Quick start</a></li>
-    <li><a href="#features">Features</a></li>
-    <li><a href="#commands">Commands</a></li>
-    <li><a href="#why">Why LC</a></li>
-    <li><a href="#nyx">Nyx</a></li>
-    <li><a href="#providers">Providers</a></li>
-    <li><a href="#install" class="nav-cta">Install →</a></li>
-  </ul>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>Localcode</span>
+      <span class="nav-ver">v4.0.0</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="features.html">Features</a></li>
+      <li><a href="platforms.html">Platforms</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode#readme" target="_blank">Docs</a></li>
+      <li><a href="install.html" class="nav-cta">Install →</a></li>
+    </ul>
+  </div>
 </nav>
 
-<!-- HERO -->
 <section id="hero">
   <div class="hero-left">
     <div class="hero-badge">
       <span class="hero-badge-dot"></span>
-      @localcode/cli &nbsp;·&nbsp; v4.0.0 &nbsp;·&nbsp; MIT open source
+      @localcode/cli · v4.0.0 · MIT open source
     </div>
     <h1>Code offline.<br/>Own everything.</h1>
     <p class="hero-desc">
-      A terminal AI coding assistant that runs 100% local with Ollama — or connect Claude, OpenAI, or Groq. 30+ slash commands, plugin system, hooks, MCP servers, and Nyx, your ASCII co-pilot.
+      A terminal AI coding agent with 139 specialized agents, multi-agent orchestration, and full local execution with Ollama. Connect Claude, OpenAI, or Groq — or run 100% offline, free forever.
     </p>
     <div class="hero-actions">
-      <a href="#install" class="btn-p">↓ Install free</a>
-      <a href="https://github.com/TheLocalCodeTeam/localcode" class="btn-s" target="_blank">⎇ GitHub</a>
+      <a href="install.html" class="btn-p">↓ Install free</a>
+      <a href="https://github.com/thealxlabs/localcode" class="btn-s" target="_blank">⎇ GitHub</a>
     </div>
     <div class="hero-stats">
+      <div class="hero-stat"><div class="num">139</div><div class="lbl">Agents</div></div>
       <div class="hero-stat"><div class="num">4</div><div class="lbl">Providers</div></div>
-      <div class="hero-stat"><div class="num">30+</div><div class="lbl">Commands</div></div>
+      <div class="hero-stat"><div class="num">60+</div><div class="lbl">Commands</div></div>
       <div class="hero-stat"><div class="num">100%</div><div class="lbl">Free w/ Ollama</div></div>
-      <div class="hero-stat"><div class="num">MIT</div><div class="lbl">License</div></div>
     </div>
   </div>
 
@@ -650,561 +72,193 @@
   </div>
 </section>
 
-<!-- TICKER -->
 <div class="ticker-wrap">
-  <div class="ticker" id="ticker">
+  <div class="ticker">
+    <span class="ticker-item">139 specialized agents</span>
+    <span class="ticker-item">Multi-agent orchestration (NEXUS pipeline)</span>
     <span class="ticker-item">100% offline with Ollama</span>
-    <span class="ticker-item">Multi-provider — Claude · OpenAI · Groq · Ollama</span>
-    <span class="ticker-item">30+ slash commands</span>
+    <span class="ticker-item">Multi-provider — Ollama · OpenAI · Anthropic · Groq</span>
+    <span class="ticker-item">60+ slash commands</span>
+    <span class="ticker-item">VS Code extension with chat, agents, session views</span>
+    <span class="ticker-item">Auto-dispatch agents based on task context</span>
     <span class="ticker-item">Plugin system — drop .js in ~/.localcode/plugins/</span>
     <span class="ticker-item">Hooks — PreToolUse · PostToolUse · Notification</span>
-    <span class="ticker-item">Memory files — .nyx.md global + project</span>
+    <span class="ticker-item">Memory files — .localcode.md global + project</span>
     <span class="ticker-item">MCP servers — stdio + HTTP</span>
     <span class="ticker-item">4 built-in themes</span>
-    <span class="ticker-item">Vision input — /image with llava · GPT-4o · Claude</span>
-    <span class="ticker-item">TF-IDF codebase search with /index</span>
-    <span class="ticker-item">Session history — browse and restore</span>
+    <span class="ticker-item">Budget guard with auto-fallback to local</span>
+    <span class="ticker-item">Safe mode with git stash protection</span>
     <span class="ticker-item">MIT License — fork it, own it</span>
+    <span class="ticker-item">139 specialized agents</span>
+    <span class="ticker-item">Multi-agent orchestration (NEXUS pipeline)</span>
     <span class="ticker-item">100% offline with Ollama</span>
-    <span class="ticker-item">Multi-provider — Claude · OpenAI · Groq · Ollama</span>
-    <span class="ticker-item">30+ slash commands</span>
+    <span class="ticker-item">Multi-provider — Ollama · OpenAI · Anthropic · Groq</span>
+    <span class="ticker-item">60+ slash commands</span>
+    <span class="ticker-item">VS Code extension with chat, agents, session views</span>
+    <span class="ticker-item">Auto-dispatch agents based on task context</span>
     <span class="ticker-item">Plugin system — drop .js in ~/.localcode/plugins/</span>
     <span class="ticker-item">Hooks — PreToolUse · PostToolUse · Notification</span>
-    <span class="ticker-item">Memory files — .nyx.md global + project</span>
+    <span class="ticker-item">Memory files — .localcode.md global + project</span>
     <span class="ticker-item">MCP servers — stdio + HTTP</span>
     <span class="ticker-item">4 built-in themes</span>
-    <span class="ticker-item">Vision input — /image with llava · GPT-4o · Claude</span>
-    <span class="ticker-item">TF-IDF codebase search with /index</span>
-    <span class="ticker-item">Session history — browse and restore</span>
+    <span class="ticker-item">Budget guard with auto-fallback to local</span>
+    <span class="ticker-item">Safe mode with git stash protection</span>
     <span class="ticker-item">MIT License — fork it, own it</span>
   </div>
 </div>
 
-<!-- QUICK START -->
 <div id="quickstart">
   <div class="section-wrap reveal">
     <div class="section-label">Quick start</div>
     <h2>Zero to first commit in 60 seconds.</h2>
     <p class="section-sub">One npm package. No config files, no daemons, no cloud setup required.</p>
     <div class="qs-grid">
-      <div class="qs-step" data-n="01">
+      <div class="qs-step">
         <div class="qs-num">01</div>
         <h3>Install</h3>
         <p><code>npm install -g @localcode/cli</code><br/>Node 18+ required. That's it.</p>
       </div>
-      <div class="qs-step" data-n="02">
+      <div class="qs-step">
         <div class="qs-num">02</div>
         <h3>Choose your provider</h3>
         <p>Run <code>localcode</code> and pick a provider. Choose <code>ollama</code> for fully free, no-key-needed local AI.</p>
       </div>
-      <div class="qs-step" data-n="03">
+      <div class="qs-step">
         <div class="qs-num">03</div>
         <h3>Chat &amp; code</h3>
-        <p>Ask anything. Nyx reads files, writes patches, runs shell commands — with permission prompts before every write.</p>
+        <p>Ask anything. Localcode reads files, writes patches, runs shell commands — with permission prompts before every write.</p>
       </div>
-      <div class="qs-step" data-n="04">
+      <div class="qs-step">
         <div class="qs-num">04</div>
         <h3>Ship it</h3>
-        <p>Run <code>/commit</code> to generate a conventional commit message. Nyx co-authors every one.</p>
+        <p>Run <code>/commit</code> to generate a conventional commit message. Ship with confidence.</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- FEATURES -->
-<section id="features">
+<section id="features-preview">
   <div class="section-wrap">
     <div class="section-label">Features</div>
     <h2>Built different.</h2>
-    <p class="section-sub">Everything Claude Code and Codex have — plus the things they'll never give you.</p>
+    <p class="section-sub">Everything the cloud assistants have — plus the things they'll never give you.</p>
     <div class="features-grid reveal">
       <div class="feature">
         <span class="feature-new-badge">New</span>
         <span class="feature-icon">◉</span>
         <h3>100% local with Ollama</h3>
-        <p>Run <code>qwen2.5-coder</code>, <code>deepseek-r1</code>, <code>llama3.2</code>, or any Ollama model. No API key. No cloud. Your code stays on your machine.</p>
+        <p>Run any Ollama model. No API key. No cloud. Your code stays on your machine.</p>
         <span class="ftag">Free forever</span>
       </div>
       <div class="feature">
+        <span class="feature-new-badge">New</span>
+        <span class="feature-icon">🤖</span>
+        <h3>139 specialized agents</h3>
+        <p>From AI engineers to security auditors, database optimizers to DevOps automators. Each with deep domain expertise.</p>
+        <span class="ftag">Auto-dispatch</span>
+      </div>
+      <div class="feature">
+        <span class="feature-new-badge">New</span>
+        <span class="feature-icon">🌐</span>
+        <h3>Multi-agent orchestration</h3>
+        <p>NEXUS pipeline coordinates multiple agents through 7 phases with quality gates, Dev↔QA loops, and parallel execution.</p>
+        <span class="ftag">NEXUS</span>
+      </div>
+      <div class="feature">
         <span class="feature-icon">⟳</span>
-        <h3>Switch providers live</h3>
-        <p>Use <code>/provider claude</code> mid-session. Switch from local Ollama to GPT-4o to Claude without restarting. Keys stored per-provider.</p>
+        <h3>Switch provider live</h3>
+        <p>Use <code>/provider</code> mid-session. Switch from local Ollama to GPT-4o to Claude without restarting.</p>
         <span class="ftag">Multi-provider</span>
       </div>
       <div class="feature">
-        <span class="feature-new-badge">New</span>
         <span class="feature-icon">⧉</span>
         <h3>Plugin system</h3>
-        <p>Drop a <code>.js</code> file in <code>~/.localcode/plugins/</code> to add custom slash commands. Full access to the conversation context and tools.</p>
+        <p>Drop a <code>.js</code> file in <code>~/.localcode/plugins/</code> to add custom slash commands.</p>
         <span class="ftag">Extensible</span>
       </div>
       <div class="feature">
-        <span class="feature-new-badge">New</span>
         <span class="feature-icon">⚡</span>
         <h3>Hooks</h3>
-        <p><code>PreToolUse</code>, <code>PostToolUse</code>, and <code>Notification</code> hooks — run custom scripts before or after any tool call, just like Claude Code.</p>
+        <p><code>PreToolUse</code>, <code>PostToolUse</code>, and <code>Notification</code> hooks — run custom scripts before or after any tool call.</p>
         <span class="ftag">Automation</span>
       </div>
-      <div class="feature">
-        <span class="feature-new-badge">New</span>
-        <span class="feature-icon">◈</span>
-        <h3>Memory files</h3>
-        <p><code>~/.nyx.md</code> for global memory, <code>.nyx.md</code> in project root for project context. Both loaded automatically at startup.</p>
-        <span class="ftag">Persistent context</span>
-      </div>
-      <div class="feature">
-        <span class="feature-new-badge">New</span>
-        <span class="feature-icon">⬡</span>
-        <h3>MCP servers</h3>
-        <p>Connect Model Context Protocol servers — both stdio and HTTP transports supported. Give the AI access to your databases, APIs, and tools.</p>
-        <span class="ftag">Extensible</span>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">⊟</span>
-        <h3>Vision input</h3>
-        <p><code>/image path/to/screenshot.png</code> — works with Claude, GPT-4o, and Ollama <code>llava</code>. Describe UI, debug layouts, analyze diagrams.</p>
-        <span class="ftag">Multimodal</span>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">⎇</span>
-        <h3>TF-IDF codebase search</h3>
-        <p><code>/index</code> builds a full semantic index of your project. Ask Nyx to find relevant files without passing your entire codebase as context.</p>
-        <span class="ftag">Smart context</span>
-      </div>
-      <div class="feature">
-        <span class="feature-icon">⚿</span>
-        <h3>Permission prompts</h3>
-        <p>Every file write, patch, or shell command asks first. Press <code>y</code>, <code>n</code>, or <code>a</code> (allow all). Full control, always.</p>
-        <span class="ftag">Safety</span>
-      </div>
+    </div>
+    <div style="text-align:center;margin-top:2.5rem">
+      <a href="features.html" class="btn-s">View all features →</a>
     </div>
   </div>
 </section>
 
-<!-- PROVIDERS -->
-<div id="providers">
-  <div class="section-wrap">
-    <div class="section-label">Providers</div>
-    <h2>Your model, your choice.</h2>
-    <p class="section-sub">Switch live with <code style="font-family:var(--mono);color:var(--text-secondary)">/provider &lt;name&gt;</code>. API keys are stored per-provider and auto-loaded from env.</p>
-    <div class="providers-grid reveal">
-      <div class="pcard">
-        <div class="pcard-icon">&#x25C9;</div>
-        <span class="pname">Ollama</span>
-        <span class="pmodels">qwen2.5-coder · llama3.2 · deepseek-r1 · mistral · gemma3 · llava</span>
-        <span class="pbadge">Free · Fully local · No API key</span>
-        <span class="pcard-setup">Requires Ollama running locally</span>
-      </div>
-      <div class="pcard">
-        <div class="pcard-icon">&#x2736;</div>
-        <span class="pname">Claude</span>
-        <span class="pmodels">claude-sonnet-4-5 · claude-opus-4-5 · claude-haiku-4-5</span>
-        <span class="pbadge">ANTHROPIC_API_KEY</span>
-        <span class="pcard-setup">console.anthropic.com</span>
-      </div>
-      <div class="pcard">
-        <div class="pcard-icon">&#x25A3;</div>
-        <span class="pname">OpenAI</span>
-        <span class="pmodels">gpt-4o · gpt-4o-mini · o1-mini · o3-mini</span>
-        <span class="pbadge">OPENAI_API_KEY</span>
-        <span class="pcard-setup">platform.openai.com/api-keys</span>
-      </div>
-      <div class="pcard">
-        <div class="pcard-icon">&#x25D9;</div>
-        <span class="pname">Groq</span>
-        <span class="pmodels">llama-3.3-70b · mixtral-8x7b · gemma2-9b</span>
-        <span class="pbadge">Free tier available</span>
-        <span class="pcard-setup">console.groq.com/keys</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- COMMANDS SHOWCASE -->
-<div id="commands">
-  <div class="section-wrap">
-    <div class="section-label">Commands</div>
-    <h2>30+ slash commands.<br/>All in the terminal.</h2>
-    <p class="section-sub">Type <code style="font-family:var(--mono);color:var(--text-secondary)">/</code> to open the interactive picker. Every command has usage hints and tab completion.</p>
-
-    <div class="cmd-tabs" id="cmd-tabs">
-      <button class="cmd-tab active" data-panel="featured">Featured</button>
-      <button class="cmd-tab" data-panel="session">Session</button>
-      <button class="cmd-tab" data-panel="git">Git &amp; Code</button>
-      <button class="cmd-tab" data-panel="context">Context</button>
-      <button class="cmd-tab" data-panel="providers">Providers</button>
-      <button class="cmd-tab" data-panel="tools">Tools</button>
-      <button class="cmd-tab" data-panel="all">All commands</button>
-    </div>
-
-    <div class="cmd-panels">
-      <!-- FEATURED -->
-      <div class="cmd-panel active" id="panel-featured">
-        <div class="cmd-list">
-          <div class="cmd-row"><span class="cmd-trigger">/review</span><span class="cmd-desc">AI code review of a file or selection with actionable suggestions.</span><span class="cmd-cat">code</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/test</span><span class="cmd-desc">Generate unit tests for a file or function. Detects your test framework.</span><span class="cmd-cat">code</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/watch</span><span class="cmd-desc">Watch a file for changes and auto-explain diffs as they happen.</span><span class="cmd-cat">code</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/image</span><span class="cmd-desc">Send an image to the model (vision). Works with Claude, GPT-4o, llava.</span><span class="cmd-cat">multimodal</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">Generate a conventional commit message from staged diff. Nyx co-authors.</span><span class="cmd-cat">git</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/index</span><span class="cmd-desc">Build TF-IDF search index of your codebase for smart context retrieval.</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/web</span><span class="cmd-desc">Fetch a URL and inject its content as context for the conversation.</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/share</span><span class="cmd-desc">Export current session to a shareable markdown or HTML snippet.</span><span class="cmd-cat">session</span></div>
-        </div>
-        <div class="cmd-demo-pane">
-          <div class="cmd-demo-title">Try it: /review</div>
-          <div class="cmd-demo-desc">Paste a file path and get a structured code review — complexity analysis, potential bugs, style suggestions, and refactoring ideas. Works with any language Nyx can read.</div>
-          <div class="cmd-demo-term">
-            <div><span class="tw">❯ /review src/api/auth.ts</span></div>
-            <div style="margin-top:.4rem"><span class="tg">◈ Reading </span><span class="tw">src/api/auth.ts</span><span class="tg"> (142 lines)</span></div>
-            <div><span class="tg">✓ Review complete — 3 issues found</span></div>
-            <div style="margin-top:.3rem;color:var(--text-muted)">  [HIGH] SQL injection risk on line 48</div>
-            <div style="color:var(--text-muted)">  [MED]  No rate limiting on login endpoint</div>
-            <div style="color:var(--text-muted)">  [LOW]  Unused import: bcryptjs</div>
-          </div>
-          <div class="cmd-demo-title" style="margin-top:.8rem">Try it: /test</div>
-          <div class="cmd-demo-term">
-            <div><span class="tw">❯ /test src/utils/parser.ts</span></div>
-            <div style="margin-top:.4rem"><span class="tg">◈ Detected framework: </span><span class="tw">vitest</span></div>
-            <div><span class="tg">✓ Generated </span><span class="tw">12 tests</span><span class="tg"> → </span><span class="tw">src/utils/parser.test.ts</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- SESSION -->
-      <div class="cmd-panel" id="panel-session">
-        <div class="cmd-list">
-          <div class="cmd-row"><span class="cmd-trigger">/clear</span><span class="cmd-desc">Clear conversation history. Checkpoints are preserved.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/compact</span><span class="cmd-desc">Summarize and compress the conversation to save context window.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/status</span><span class="cmd-desc">Show provider, model, key status, token count, and checkpoints.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/checkpoint</span><span class="cmd-desc">Save a named snapshot. Usage: /checkpoint before-refactor</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/restore</span><span class="cmd-desc">List or restore a saved checkpoint by ID.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/history</span><span class="cmd-desc">Browse and restore past sessions interactively.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/theme</span><span class="cmd-desc">Switch UI theme: dark · nord · monokai · light</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/share</span><span class="cmd-desc">Export session as shareable markdown or HTML snippet.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/ping</span><span class="cmd-desc">Test connection to the current provider. Shows latency.</span><span class="cmd-cat">session</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/exit</span><span class="cmd-desc">Save session state and quit the application.</span><span class="cmd-cat">session</span></div>
-        </div>
-        <div class="cmd-demo-pane">
-          <div class="cmd-demo-title">/theme</div>
-          <div class="cmd-demo-desc">Four built-in themes: dark (default), nord, monokai, and light. Instant toggle, persisted across sessions.</div>
-          <div class="cmd-demo-term">
-            <div><span class="tw">❯ /theme nord</span></div>
-            <div style="margin-top:.3rem"><span class="tg">✓ Theme set to </span><span class="tw">nord</span></div>
-          </div>
-          <div class="cmd-demo-title" style="margin-top:.9rem">/history</div>
-          <div class="cmd-demo-desc">Browse your past sessions by date and topic. Select any session to restore its context — files, messages, and checkpoints.</div>
-        </div>
-      </div>
-
-      <!-- GIT -->
-      <div class="cmd-panel" id="panel-git">
-        <div class="cmd-list">
-          <div class="cmd-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">Generate a conventional commit message from staged diff. Nyx co-authors.</span><span class="cmd-cat">git</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/git</span><span class="cmd-desc">Run git commands with AI assistance. /git status, /git log, etc.</span><span class="cmd-cat">git</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/diff</span><span class="cmd-desc">Show all files modified by tool calls in this session.</span><span class="cmd-cat">git</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/review</span><span class="cmd-desc">AI code review of a file or selection with actionable feedback.</span><span class="cmd-cat">code</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/test</span><span class="cmd-desc">Generate unit tests. Auto-detects Jest, Vitest, Mocha, pytest, etc.</span><span class="cmd-cat">code</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/explain</span><span class="cmd-desc">Explain a file, function, or concept in plain English.</span><span class="cmd-cat">code</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/watch</span><span class="cmd-desc">Watch a file for changes and auto-explain diffs in real time.</span><span class="cmd-cat">code</span></div>
-        </div>
-        <div class="cmd-demo-pane">
-          <div class="cmd-demo-title">/commit — AI-generated commits</div>
-          <div class="cmd-demo-desc">Stage your changes, run /commit, and Nyx reads the diff and writes a conventional commit message. She's automatically added as co-author.</div>
-          <div class="cmd-demo-term">
-            <div><span class="tw">❯ /commit</span></div>
-            <div style="margin-top:.3rem"><span class="tg">⟳ Reading staged diff…</span></div>
-            <div><span class="tw">✓ feat(auth): add refresh token rotation</span></div>
-            <div style="color:#333;font-size:.65rem;margin-top:.2rem">  Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- CONTEXT -->
-      <div class="cmd-panel" id="panel-context">
-        <div class="cmd-list">
-          <div class="cmd-row"><span class="cmd-trigger">/context</span><span class="cmd-desc">Inject a file or folder into the conversation. Usage: /context src/</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/index</span><span class="cmd-desc">Build TF-IDF search index of your codebase. Enables smart context retrieval.</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/web</span><span class="cmd-desc">Fetch a URL and inject the page content as context.</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/image</span><span class="cmd-desc">Send an image to the model. Works with Claude, GPT-4o, and Ollama llava.</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/template</span><span class="cmd-desc">Apply a saved prompt template. /template init, /template review, etc.</span><span class="cmd-cat">context</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/alias</span><span class="cmd-desc">Create custom command aliases. /alias deploy="run npm run deploy"</span><span class="cmd-cat">context</span></div>
-        </div>
-        <div class="cmd-demo-pane">
-          <div class="cmd-demo-title">/index — TF-IDF codebase search</div>
-          <div class="cmd-demo-desc">Build a full semantic index of your project. Instead of injecting thousands of lines of context, Nyx finds the 5-10 most relevant files automatically.</div>
-          <div class="cmd-demo-term">
-            <div><span class="tw">❯ /index</span></div>
-            <div style="margin-top:.3rem"><span class="tg">◈ Indexed </span><span class="tw">847 files</span><span class="tg"> in 1.2s</span></div>
-            <div><span class="tg">✓ TF-IDF index ready. Ask me anything.</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PROVIDERS -->
-      <div class="cmd-panel" id="panel-providers">
-        <div class="cmd-list">
-          <div class="cmd-row"><span class="cmd-trigger">/provider</span><span class="cmd-desc">List or switch providers. Usage: /provider ollama</span><span class="cmd-cat">provider</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/model</span><span class="cmd-desc">Switch model for the active provider. Usage: /model qwen2.5-coder:7b</span><span class="cmd-cat">provider</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/apikey</span><span class="cmd-desc">Set or update API key for current provider.</span><span class="cmd-cat">provider</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/ping</span><span class="cmd-desc">Test provider connection and show latency.</span><span class="cmd-cat">provider</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/doctor</span><span class="cmd-desc">Run diagnostics: check Ollama, API keys, Node version, and config.</span><span class="cmd-cat">provider</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/init</span><span class="cmd-desc">Re-run the setup wizard. Pick provider, model, and configure keys.</span><span class="cmd-cat">provider</span></div>
-        </div>
-        <div class="cmd-demo-pane">
-          <div class="cmd-demo-title">/provider — live switching</div>
-          <div class="cmd-demo-desc">Switch between any provider mid-session without losing context. Your API keys are stored per-provider and reloaded automatically.</div>
-          <div class="cmd-demo-term">
-            <div><span class="tw">❯ /provider claude</span></div>
-            <div style="margin-top:.3rem"><span class="tg">✓ Switched to </span><span class="tw">claude-sonnet-4-5</span></div>
-            <div><span class="tw">❯ /provider ollama</span></div>
-            <div><span class="tg">✓ Switched to </span><span class="tw">qwen2.5-coder:7b</span><span class="tg"> (local)</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TOOLS -->
-      <div class="cmd-panel" id="panel-tools">
-        <div class="cmd-list">
-          <div class="cmd-row"><span class="cmd-trigger">/allowall</span><span class="cmd-desc">Toggle permission prompts for all tool calls this session.</span><span class="cmd-cat">tools</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/template</span><span class="cmd-desc">Manage and apply saved prompt templates.</span><span class="cmd-cat">tools</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/alias</span><span class="cmd-desc">Create or list command aliases for common tasks.</span><span class="cmd-cat">tools</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/hook</span><span class="cmd-desc">Manage PreToolUse, PostToolUse, and Notification hooks.</span><span class="cmd-cat">tools</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/mcp</span><span class="cmd-desc">Connect or list MCP (Model Context Protocol) servers.</span><span class="cmd-cat">tools</span></div>
-          <div class="cmd-row"><span class="cmd-trigger">/memory</span><span class="cmd-desc">View or edit the .nyx.md memory files (global and project).</span><span class="cmd-cat">tools</span></div>
-        </div>
-        <div class="cmd-demo-pane">
-          <div class="cmd-demo-title">/hook — automation</div>
-          <div class="cmd-demo-desc">Run custom scripts before or after any tool call. Wire up linters, formatters, notifications, or anything else you want Nyx to trigger automatically.</div>
-          <div class="cmd-demo-term">
-            <div style="color:#333;font-size:.66rem">// ~/.localcode/hooks/post-write.sh</div>
-            <div style="color:var(--text-muted)">npm run lint --fix $FILE</div>
-            <div style="color:var(--text-muted)">git add $FILE</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ALL -->
-      <div class="cmd-panel" id="panel-all" style="display:none">
-        <div style="padding:1.2rem 1.4rem;grid-column:1/-1;width:100%">
-          <div class="cmd-all-grid">
-            <div class="cmd-all-row"><span class="cmd-trigger">/clear</span><span class="cmd-desc">Clear conversation history</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/compact</span><span class="cmd-desc">Compress conversation to save context</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/status</span><span class="cmd-desc">Show provider, model, tokens, checkpoints</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/checkpoint</span><span class="cmd-desc">Save named session snapshot</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/restore</span><span class="cmd-desc">Restore a checkpoint by ID</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/history</span><span class="cmd-desc">Browse and restore past sessions</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/theme</span><span class="cmd-desc">Switch UI theme (dark/nord/monokai/light)</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/share</span><span class="cmd-desc">Export session as markdown/HTML</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/ping</span><span class="cmd-desc">Test provider connection and latency</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/exit</span><span class="cmd-desc">Save and quit</span><span class="cmd-cat">session</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/commit</span><span class="cmd-desc">AI-generated conventional commit</span><span class="cmd-cat">git</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/git</span><span class="cmd-desc">AI-assisted git commands</span><span class="cmd-cat">git</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/diff</span><span class="cmd-desc">Show session file modifications</span><span class="cmd-cat">git</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/review</span><span class="cmd-desc">AI code review with suggestions</span><span class="cmd-cat">code</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/test</span><span class="cmd-desc">Generate unit tests for a file</span><span class="cmd-cat">code</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/explain</span><span class="cmd-desc">Explain code in plain English</span><span class="cmd-cat">code</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/watch</span><span class="cmd-desc">Watch file and auto-explain changes</span><span class="cmd-cat">code</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/context</span><span class="cmd-desc">Inject file or folder as context</span><span class="cmd-cat">context</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/index</span><span class="cmd-desc">Build TF-IDF codebase search index</span><span class="cmd-cat">context</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/web</span><span class="cmd-desc">Fetch URL and inject as context</span><span class="cmd-cat">context</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/image</span><span class="cmd-desc">Vision input for Claude/GPT-4o/llava</span><span class="cmd-cat">context</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/template</span><span class="cmd-desc">Apply saved prompt templates</span><span class="cmd-cat">tools</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/alias</span><span class="cmd-desc">Create command aliases</span><span class="cmd-cat">tools</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/hook</span><span class="cmd-desc">Manage PreToolUse/PostToolUse hooks</span><span class="cmd-cat">tools</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/mcp</span><span class="cmd-desc">Connect MCP servers</span><span class="cmd-cat">tools</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/memory</span><span class="cmd-desc">View/edit .nyx.md memory files</span><span class="cmd-cat">tools</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/allowall</span><span class="cmd-desc">Toggle permission prompts</span><span class="cmd-cat">tools</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/provider</span><span class="cmd-desc">List or switch providers</span><span class="cmd-cat">provider</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/model</span><span class="cmd-desc">Switch model for active provider</span><span class="cmd-cat">provider</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/apikey</span><span class="cmd-desc">Set API key for current provider</span><span class="cmd-cat">provider</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/doctor</span><span class="cmd-desc">Run setup diagnostics</span><span class="cmd-cat">provider</span></div>
-            <div class="cmd-all-row"><span class="cmd-trigger">/init</span><span class="cmd-desc">Re-run setup wizard</span><span class="cmd-cat">provider</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- PLUGIN SYSTEM -->
-<div id="plugins">
-  <div class="section-wrap reveal">
-    <div class="section-label">Plugin system</div>
-    <h2>Extend Nyx with<br/>your own commands.</h2>
-    <p class="section-sub">Drop a <code style="font-family:var(--mono);color:var(--text-secondary)">.js</code> file in <code style="font-family:var(--mono);color:var(--text-secondary)">~/.localcode/plugins/</code> and it becomes a first-class slash command.</p>
-    <div class="plugin-grid">
-      <div class="plugin-code">
-        <div style="color:#333;font-size:.7rem;margin-bottom:1rem;letter-spacing:.04em">// ~/.localcode/plugins/deploy.js</div>
-        <div><span class="pk">module</span>.<span class="pf">exports</span> = {</div>
-        <div>&nbsp;&nbsp;<span class="pf">name</span>: <span class="ps">'deploy'</span>,</div>
-        <div>&nbsp;&nbsp;<span class="pf">description</span>: <span class="ps">'Deploy to production'</span>,</div>
-        <div>&nbsp;&nbsp;<span class="pk">async</span> <span class="pf">run</span>({ context, tools }) {</div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="pc">// Full access to AI context + tools</span></div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="pk">const</span> review = <span class="pk">await</span> context.<span class="pf">ask</span>(</div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ps">'Check for security issues'</span></div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;);</div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="pk">if</span> (review.<span class="pf">safe</span>) {</div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="pk">await</span> tools.<span class="pf">shell</span>(<span class="ps">'npm run deploy'</span>);</div>
-        <div>&nbsp;&nbsp;&nbsp;&nbsp;}</div>
-        <div>&nbsp;&nbsp;}</div>
-        <div>};</div>
-      </div>
-      <div class="plugin-features">
-        <div class="plugin-feat">
-          <span class="plugin-feat-icon">◈</span>
-          <div>
-            <h4>Zero boilerplate</h4>
-            <p>Name the file, export an object with <code style="font-family:var(--mono);color:var(--text-secondary)">name</code>, <code style="font-family:var(--mono);color:var(--text-secondary)">description</code>, and <code style="font-family:var(--mono);color:var(--text-secondary)">run</code>. Nyx hot-reloads it on next command.</p>
-          </div>
-        </div>
-        <div class="plugin-feat">
-          <span class="plugin-feat-icon">⚡</span>
-          <div>
-            <h4>Full AI access</h4>
-            <p>Plugins get the full conversation context, can ask the AI questions, and call any of LocalCode's built-in tools.</p>
-          </div>
-        </div>
-        <div class="plugin-feat">
-          <span class="plugin-feat-icon">⧉</span>
-          <div>
-            <h4>Share and publish</h4>
-            <p>Package your plugin as an npm module. Anyone can install it with <code style="font-family:var(--mono);color:var(--text-secondary)">npm install -g localcode-plugin-deploy</code>.</p>
-          </div>
-        </div>
-        <div class="plugin-feat">
-          <span class="plugin-feat-icon">⎇</span>
-          <div>
-            <h4>Hooks too</h4>
-            <p>Plugins can register <code style="font-family:var(--mono);color:var(--text-secondary)">PreToolUse</code> and <code style="font-family:var(--mono);color:var(--text-secondary)">PostToolUse</code> hooks that fire automatically on every tool call.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- WHY LOCALCODE -->
 <div id="why">
   <div class="section-wrap">
-    <div class="section-label">Why LocalCode</div>
+    <div class="section-label">Why Localcode</div>
     <h2>The one they don't<br/>want you to have.</h2>
-    <p class="section-sub">Claude Code is great — but it locks you in. LocalCode gives you everything they have, plus the things that matter for serious developers.</p>
+    <p class="section-sub">Cloud assistants lock you in. Localcode gives you everything they have, plus the things that matter for serious developers.</p>
     <div class="vs-table reveal">
       <div class="vs-header">
         <div class="vs-col-header">Feature</div>
-        <div class="vs-col-header lc">LocalCode</div>
-        <div class="vs-col-header">Claude Code</div>
-        <div class="vs-col-header">Codex CLI</div>
+        <div class="vs-col-header lc">Localcode</div>
+        <div class="vs-col-header">Cloud Assistants</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Fully local / offline mode</div>
         <div class="vs-cell yes lc-cell">✓ Free with Ollama</div>
         <div class="vs-cell no">✗ Always cloud</div>
-        <div class="vs-cell no">✗ Always cloud</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Multi-provider support</div>
         <div class="vs-cell yes lc-cell">✓ 4 providers</div>
-        <div class="vs-cell no">✗ Claude only</div>
-        <div class="vs-cell no">✗ OpenAI only</div>
+        <div class="vs-cell no">✗ One provider only</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Switch provider live</div>
         <div class="vs-cell yes lc-cell">✓ /provider cmd</div>
-        <div class="vs-cell no">✗</div>
         <div class="vs-cell no">✗</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Open source (MIT)</div>
         <div class="vs-cell yes lc-cell">✓ Full source</div>
         <div class="vs-cell no">✗ Proprietary</div>
-        <div class="vs-cell partial">~ Partial</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Specialized agents</div>
+        <div class="vs-cell yes lc-cell">✓ 139 agents</div>
+        <div class="vs-cell no">✗</div>
+      </div>
+      <div class="vs-row">
+        <div class="vs-cell feature-name">Multi-agent orchestration</div>
+        <div class="vs-cell yes lc-cell">✓ NEXUS pipeline</div>
+        <div class="vs-cell no">✗</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Plugin system</div>
         <div class="vs-cell yes lc-cell">✓ Drop .js files</div>
         <div class="vs-cell no">✗</div>
-        <div class="vs-cell no">✗</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Hooks (Pre/PostToolUse)</div>
         <div class="vs-cell yes lc-cell">✓</div>
-        <div class="vs-cell yes">✓</div>
-        <div class="vs-cell no">✗</div>
+        <div class="vs-cell partial">~ Limited</div>
       </div>
       <div class="vs-row">
-        <div class="vs-cell feature-name">Memory files (.nyx.md)</div>
+        <div class="vs-cell feature-name">Memory files</div>
         <div class="vs-cell yes lc-cell">✓ Global + project</div>
-        <div class="vs-cell yes">✓ CLAUDE.md</div>
-        <div class="vs-cell no">✗</div>
+        <div class="vs-cell partial">~ Project only</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">MCP server support</div>
         <div class="vs-cell yes lc-cell">✓ stdio + HTTP</div>
         <div class="vs-cell yes">✓</div>
-        <div class="vs-cell no">✗</div>
-      </div>
-      <div class="vs-row">
-        <div class="vs-cell feature-name">Vision / image input</div>
-        <div class="vs-cell yes lc-cell">✓ /image cmd</div>
-        <div class="vs-cell yes">✓</div>
-        <div class="vs-cell no">✗</div>
-      </div>
-      <div class="vs-row">
-        <div class="vs-cell feature-name">TF-IDF codebase search</div>
-        <div class="vs-cell yes lc-cell">✓ /index cmd</div>
-        <div class="vs-cell no">✗</div>
-        <div class="vs-cell no">✗</div>
-      </div>
-      <div class="vs-row">
-        <div class="vs-cell feature-name">Session history / restore</div>
-        <div class="vs-cell yes lc-cell">✓ /history cmd</div>
-        <div class="vs-cell no">✗</div>
-        <div class="vs-cell no">✗</div>
       </div>
       <div class="vs-row">
         <div class="vs-cell feature-name">Free to use</div>
         <div class="vs-cell yes lc-cell">✓ With Ollama</div>
         <div class="vs-cell no">✗ Subscription</div>
-        <div class="vs-cell partial">~ Free tier</div>
-      </div>
-    </div>
-    <p style="color:#2a2a2a;font-size:.75rem;margin-top:1.2rem;text-align:right;font-weight:400">Last updated March 2026. Subject to change as tools evolve.</p>
-  </div>
-</div>
-
-<!-- NYX -->
-<div id="nyx">
-  <div class="inner">
-    <div class="nyx-stage">
-      <div class="nyx-big" id="nyx-art"> /\_/\
-( ·.· )
- > ♥ < </div>
-      <div class="mood-pills">
-        <button class="mpill active" onclick="setMood('idle')">idle</button>
-        <button class="mpill" onclick="setMood('thinking')">thinking</button>
-        <button class="mpill" onclick="setMood('happy')">happy</button>
-        <button class="mpill" onclick="setMood('error')">error</button>
-        <button class="mpill" onclick="setMood('waiting')">waiting</button>
-      </div>
-    </div>
-    <div class="nyx-desc">
-      <div class="section-label">Your co-pilot</div>
-      <h3>Meet Nyx.</h3>
-      <p>Nyx is LocalCode's ASCII cat mascot. She lives in the header of every session, reacting in real time to what's happening — thinking when the model is working, lighting up on success, shifting on errors.</p>
-      <p>She's not just decoration. Every git commit made through <code style="font-family:var(--mono);color:var(--text-secondary)">/commit</code> carries her co-author signature — so she shows up as a real contributor on your GitHub repos.</p>
-      <div class="coauthor-badge">Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</div>
-      <div class="nyx-facts">
-        <div class="nfact"><div class="nl">Mood states</div><div class="nv">idle · thinking · happy · error · waiting</div></div>
-        <div class="nfact"><div class="nl">Co-author email</div><div class="nv" style="font-family:var(--mono);font-size:.75rem">nyx@thealxlabs.ca</div></div>
-        <div class="nfact"><div class="nl">Appears in</div><div class="nv">Header · Commits · Errors · Setup wizard</div></div>
-        <div class="nfact"><div class="nl">Created by</div><div class="nv"><a href="https://github.com/TheLocalCodeTeam" style="color:var(--text-secondary);text-decoration:none">TheLocalCodeTeam</a> · Toronto</div></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- INSTALL -->
 <div id="install">
   <div class="inner reveal">
     <div class="section-label" style="justify-content:center">Get started</div>
@@ -1249,169 +303,18 @@
   </div>
 </div>
 
-<!-- FOOTER -->
 <footer>
   <div class="footer-links">
-    <span><a href="#" style="color:var(--text-secondary)">LocalCode</a> v4.0.0</span>
-    <a href="https://github.com/TheLocalCodeTeam/localcode" target="_blank">⎇ GitHub</a>
+    <span><a href="index.html" style="color:var(--text-secondary)">Localcode</a> v4.0.0</span>
+    <a href="features.html">Features</a>
+    <a href="platforms.html">Platforms</a>
+    <a href="agents.html">Agents</a>
+    <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
     <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
-    <a href="https://github.com/TheLocalCodeTeam/localcode/blob/main/LICENSE" target="_blank" class="mit-badge">MIT</a>
   </div>
-  <span>Built by <a href="https://github.com/TheLocalCodeTeam" target="_blank">TheLocalCodeTeam</a> · co-piloted by Nyx <span style="color:var(--text-muted);font-family:var(--mono)">( ·.· )</span></span>
+  <span>Built by <a href="https://github.com/thealxlabs" target="_blank">TheAlxLabs</a> · MIT License</span>
 </footer>
 
-<script>
-// NAV SCROLL
-window.addEventListener('scroll',()=>{
-  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40);
-});
-
-// TERMINAL ANIMATION
-const scene = document.getElementById('tscene');
-
-const NYX_HDR = `<div class="tnyx-header">
-  <div class="tnyx-art" id="tnyx"> /\\_/\\ \n( ·.· )\n &gt; ♥ &lt; </div>
-  <div class="tnyx-info">
-    <span><span class="tw" style="font-weight:600">LocalCode</span> <span class="tg">v4.0.0 · @localcode/cli</span></span>
-    <span><span class="tg">provider  </span><span class="tw">ollama</span><span class="tg">  qwen2.5-coder:7b</span></span>
-    <span><span class="tg">cwd       </span><span class="tl">~/projects/api</span></span>
-    <span><span class="tg">memory    </span><span class="tw">.nyx.md</span><span class="tg"> loaded</span></span>
-  </div>
-</div>`;
-
-const FRAMES = [
-  [0,    NYX_HDR],
-  [200,  `<div class="trow"><span class="tg">❯ </span><span class="tw" id="tw1"></span><span class="cursor" id="tc1"></span></div>`],
-  [300,  null,'tw1','review src/routes/auth.ts',38,'tc1'],
-  [1400, `<div class="trow"><span class="tg">◈ </span><span class="tg">Reading </span><span class="tw">src/routes/auth.ts</span><span class="tg"> (198 lines)</span></div>`],
-  [2000, `<div class="trow"><span class="tg">⟳ </span><span class="tl">read_file</span><span class="tg">  path='src/routes/auth.ts'</span></div>`],
-  [2700, `<div class="trow" style="margin-top:.2rem"><span class="td">⚠ </span><span class="tw">[HIGH] SQL injection risk on line 48</span></div>`],
-  [3000, `<div class="trow"><span class="td">⚠ </span><span class="tw">[MED]  No rate limiting on /login</span></div>`],
-  [3300, `<div class="trow"><span class="tg">  </span><span class="tg">[LOW]  Unused import: bcryptjs</span></div>`],
-  [3800, `<div class="trow" style="margin-top:.3rem"><span class="tg">❯ </span><span class="tw" id="tw2"></span><span class="cursor" id="tc2"></span></div>`],
-  [4000, null,'tw2','/provider claude',38,'tc2'],
-  [4900, `<div class="trow"><span class="tg">✓ </span><span class="tg">Switched to </span><span class="tw">claude-sonnet-4-5</span></div>`],
-  [5400, `<div class="trow" style="margin-top:.3rem"><span class="tg">❯ </span><span class="tw" id="tw3"></span><span class="cursor" id="tc3"></span></div>`],
-  [5600, null,'tw3','/commit',38,'tc3'],
-  [6300, `<div class="trow"><span class="tg">⟳ </span><span class="tg">Generating commit from staged diff…</span></div>`],
-  [7200, `<div class="trow"><span class="tw">✓ fix(auth): sanitize inputs + add rate limiting</span></div>`],
-  [7600, `<div class="trow"><span class="tg" style="font-size:.64rem">  Co-authored-by: Nyx &lt;nyx@thealxlabs.ca&gt;</span></div>`],
-  [8300, `<div class="trow" style="margin-top:.3rem"><span class="tg">❯ </span><span class="cursor"></span></div>`],
-];
-
-let timeouts = [];
-function clearAnim(){timeouts.forEach(clearTimeout);timeouts=[];}
-
-function typeText(elId,text,msPerChar,cursorId){
-  return new Promise(res=>{
-    const el=document.getElementById(elId);
-    if(!el){res();return;}
-    const cur=cursorId?document.getElementById(cursorId):null;
-    let i=0;
-    function tick(){
-      if(!el){res();return;}
-      el.textContent=text.slice(0,i);
-      i++;
-      if(i<=text.length){timeouts.push(setTimeout(tick,msPerChar));}
-      else{if(cur)cur.remove();res();}
-    }
-    tick();
-  });
-}
-
-function playTerminal(){
-  clearAnim();
-  scene.innerHTML='';
-  FRAMES.forEach(([delay,html,twId,twText,twSpeed,tcId])=>{
-    const t=setTimeout(async()=>{
-      if(html){scene.insertAdjacentHTML('beforeend',html);scene.scrollTop=scene.scrollHeight;}
-      if(twId&&twText){await typeText(twId,twText,twSpeed||38,tcId);scene.scrollTop=scene.scrollHeight;}
-    },delay);
-    timeouts.push(t);
-  });
-  // Nyx mood transitions
-  timeouts.push(setTimeout(()=>{const n=document.getElementById('tnyx');if(n)n.innerHTML=' /\\_/\\ \n( ?.? )\n &gt; ~ &lt; ';},1400));
-  timeouts.push(setTimeout(()=>{const n=document.getElementById('tnyx');if(n){n.innerHTML=' /\\_/\\ \n( ^.^ )\n &gt; ★ &lt; ';n.style.color='var(--text)';}},7200));
-}
-
-document.getElementById('replay-btn').addEventListener('click',playTerminal);
-playTerminal();
-
-// NYX MOOD SWITCHER
-const MOODS={
-  idle:    {art:' /\\_/\\ \n( ·.· )\n &gt; ♥ &lt; ',color:'var(--text-secondary)'},
-  thinking:{art:' /\\_/\\ \n( ?.? )\n &gt; ~ &lt; ',color:'var(--text-secondary)'},
-  happy:   {art:' /\\_/\\ \n( ^.^ )\n &gt; ★ &lt; ',color:'var(--text)'},
-  error:   {art:' /\\_/\\ \n( ×.× )\n &gt; ! &lt; ',color:'var(--text-muted)'},
-  waiting: {art:' /\\_/\\ \n( -.o )\n &gt; … &lt; ',color:'#555'},
-};
-const nyxEl=document.getElementById('nyx-art');
-function setMood(mood){
-  const m=MOODS[mood];
-  nyxEl.style.opacity='0';
-  nyxEl.style.transform='scale(0.95)';
-  nyxEl.style.transition='opacity .15s,transform .15s,color .2s';
-  setTimeout(()=>{
-    nyxEl.innerHTML=m.art;
-    nyxEl.style.color=m.color;
-    nyxEl.style.opacity='1';
-    nyxEl.style.transform='scale(1)';
-  },150);
-  document.querySelectorAll('.mpill').forEach(b=>b.classList.toggle('active',b.textContent===mood));
-}
-const moodCycle=['idle','thinking','happy','idle','waiting','idle','error','idle','idle','idle'];
-let moodIdx=0;
-const moodTimer=setInterval(()=>{moodIdx=(moodIdx+1)%moodCycle.length;setMood(moodCycle[moodIdx]);},2800);
-document.querySelectorAll('.mpill').forEach(b=>b.addEventListener('click',()=>clearInterval(moodTimer)));
-
-// COMMAND TABS
-document.querySelectorAll('.cmd-tab').forEach(tab=>{
-  tab.addEventListener('click',()=>{
-    document.querySelectorAll('.cmd-tab').forEach(t=>t.classList.remove('active'));
-    document.querySelectorAll('.cmd-panel').forEach(p=>{p.classList.remove('active');p.style.display='none';});
-    tab.classList.add('active');
-    const panel=document.getElementById('panel-'+tab.dataset.panel);
-    if(panel){
-      if(tab.dataset.panel==='all'){
-        panel.style.display='block';
-        panel.classList.add('active');
-      } else {
-        panel.style.display='grid';
-        panel.classList.add('active');
-      }
-    }
-  });
-});
-
-// SCROLL REVEAL
-const ro=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    if(!e.isIntersecting)return;
-    e.target.classList.add('vis');
-    const kids=e.target.querySelectorAll('.feature,.pcard,.qs-step,.cmd-row,.cmd-all-row,.vs-row,.plugin-feat');
-    kids.forEach((k,i)=>{
-      k.style.opacity='0';
-      k.style.transform='translateY(10px)';
-      k.style.transition='none';
-      setTimeout(()=>{
-        k.style.transition='opacity .4s ease,transform .4s ease';
-        k.style.opacity='1';
-        k.style.transform='none';
-      },i*40);
-    });
-  });
-},{threshold:0.06});
-document.querySelectorAll('.reveal').forEach(el=>ro.observe(el));
-
-// COPY
-function cp(btn,text){
-  navigator.clipboard.writeText(text).then(()=>{
-    const orig=btn.textContent;
-    btn.textContent='copied';
-    btn.classList.add('ok');
-    setTimeout(()=>{btn.textContent=orig;btn.classList.remove('ok');},1800);
-  });
-}
-</script>
+<script src="js/main.js"></script>
 </body>
 </html>

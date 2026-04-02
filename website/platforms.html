@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Platforms — Localcode</title>
+  <meta name="description" content="Use Localcode in your terminal, VS Code, JetBrains, desktop app, web, or Slack."/>
+  <link rel="icon" type="image/png" href="assets/favicon.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<div class="hero-bg"></div>
+<div class="hero-glow"></div>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>Localcode</span>
+      <span class="nav-ver">v4.0.0</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="features.html">Features</a></li>
+      <li><a href="platforms.html" class="active">Platforms</a></li>
+      <li><a href="agents.html">Agents</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode" target="_blank">GitHub</a></li>
+      <li><a href="https://github.com/thealxlabs/localcode#readme" target="_blank">Docs</a></li>
+      <li><a href="install.html" class="nav-cta">Install →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="container">
+    <div class="section-label">Platforms</div>
+    <h1>Use Localcode<br/>where you work</h1>
+    <p class="page-sub">Terminal, IDE, desktop, web, or Slack — Localcode meets you wherever you code.</p>
+  </div>
+</div>
+
+<section class="platforms-detail">
+  <div class="container">
+    <div class="platform-tabs" id="platform-tabs">
+      <button class="platform-tab active" data-tab="terminal">Terminal</button>
+      <button class="platform-tab" data-tab="vscode">VS Code</button>
+      <button class="platform-tab" data-tab="desktop">Desktop</button>
+      <button class="platform-tab" data-tab="web">Web</button>
+      <button class="platform-tab" data-tab="slack">Slack</button>
+    </div>
+    <div class="platform-panels">
+      <div class="platform-panel active" id="pp-terminal">
+        <div class="pp-grid">
+          <div class="pp-info">
+            <h3>Terminal</h3>
+            <p>Work with Localcode directly in your terminal. Localcode explores your codebase context, answers questions, and makes changes. It can even use all your CLI tools.</p>
+            <div class="pp-links">
+              <a href="install.html" class="btn-p">Get Localcode</a>
+              <a href="https://github.com/thealxlabs/localcode#readme" class="btn-s">Documentation</a>
+            </div>
+          </div>
+          <div class="pp-demo">
+            <div class="terminal" style="position:relative">
+              <div class="tbar"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div><span class="ttitle">localcode — ~/projects/api</span></div>
+              <div class="tbody" style="min-height:280px;max-height:280px">
+                <div class="trow"><span class="tg">❯ </span><span class="tw">Explain this codebase to me</span></div>
+                <div class="trow" style="margin-top:.3rem"><span class="tg">◈ </span><span class="tg">I'll analyze the codebase structure and provide a high-level overview.</span></div>
+                <div class="trow" style="margin-top:.2rem"><span class="tg">⟳ </span><span class="tl">list_dir</span><span class="tg">  src/  tests/  package.json</span></div>
+                <div class="trow"><span class="tg">⟳ </span><span class="tl">search_files</span><span class="tg">  12 files, 47 functions</span></div>
+                <div class="trow" style="margin-top:.2rem"><span class="tg">◈ </span><span class="tg">This is a Node.js web application with an Express backend and React frontend. MVC pattern with 12 source files and 47 functions.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="platform-panel" id="pp-vscode">
+        <div class="pp-grid">
+          <div class="pp-info">
+            <h3>VS Code & JetBrains</h3>
+            <p>Run Localcode directly in your IDE and see changes as visual diffs. Native extensions for VS Code, Cursor, Windsurf, and JetBrains IDEs.</p>
+            <div class="pp-links">
+              <a href="https://marketplace.visualstudio.com/items?itemName=thealxlabs.localcode" class="btn-p">VS Code Extension</a>
+              <a href="https://github.com/thealxlabs/localcode/tree/main/extensions/vscode" class="btn-s">Source Code</a>
+            </div>
+          </div>
+          <div class="pp-demo">
+            <div class="ide-mockup">
+              <div class="ide-sidebar"><div class="ide-sidebar-item active">💬 Chat</div><div class="ide-sidebar-item">🤖 Agents</div><div class="ide-sidebar-item">📊 Session</div></div>
+              <div class="ide-content">
+                <div class="ide-chat">
+                  <div class="ide-msg user">Refactor the auth middleware to use JWT</div>
+                  <div class="ide-msg assistant">I'll refactor the auth middleware. Let me examine the current implementation first...</div>
+                  <div class="ide-msg tool">read_file → src/middleware/auth.ts</div>
+                  <div class="ide-msg tool">patch_file → +45 -23 lines changed</div>
+                  <div class="ide-msg assistant">Done! All tests pass. The middleware now uses JWT tokens instead of sessions.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="platform-panel" id="pp-desktop">
+        <div class="pp-grid">
+          <div class="pp-info">
+            <h3>Desktop App</h3>
+            <p>Run Localcode in the desktop app. Manage multiple parallel tasks, review visual diffs, preview servers, and monitor PR status, all from one place.</p>
+            <div class="pp-links"><a href="#" class="btn-p">Download Desktop</a></div>
+          </div>
+          <div class="pp-demo">
+            <div class="desktop-mockup">
+              <div class="desktop-sidebar"><div class="desktop-task active">Refactor auth</div><div class="desktop-task">Fix login bug</div><div class="desktop-task">Add tests</div><div class="desktop-task">Update docs</div></div>
+              <div class="desktop-main">
+                <div class="desktop-code">
+                  <div class="code-line"><span class="code-keyword">import</span> { verify } <span class="code-keyword">from</span> <span class="code-string">'jsonwebtoken'</span>;</div>
+                  <div class="code-line"></div>
+                  <div class="code-line"><span class="code-keyword">export const</span> <span class="code-func">authMiddleware</span> = (req, res, next) => {</div>
+                  <div class="code-line code-added">  <span class="code-keyword">const</span> token = req.headers.authorization?.split(<span class="code-string">' '</span>)[<span class="code-num">1</span>];</div>
+                  <div class="code-line code-added">  <span class="code-keyword">if</span> (!token) <span class="code-keyword">return</span> res.status(<span class="code-num">401</span>).json({ error: <span class="code-string">'No token'</span> });</div>
+                  <div class="code-line code-added">  <span class="code-keyword">const</span> decoded = verify(token, process.env.JWT_SECRET);</div>
+                  <div class="code-line code-added">  req.user = decoded;</div>
+                  <div class="code-line code-added">  next();</div>
+                  <div class="code-line">};</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="platform-panel" id="pp-web">
+        <div class="pp-grid">
+          <div class="pp-info">
+            <h3>Web & Mobile</h3>
+            <p>Delegate tasks to Localcode from your browser or mobile app. Great for bug fixes, routine tasks, and kicking off work while on-the-go.</p>
+            <div class="pp-links"><a href="#" class="btn-p">Open in browser</a></div>
+          </div>
+          <div class="pp-demo">
+            <div class="phone-mockup">
+              <div class="phone-header"><span class="phone-time">9:41</span><span class="phone-title">Localcode</span></div>
+              <div class="phone-chat">
+                <div class="phone-msg user">Fix the login bug on mobile</div>
+                <div class="phone-msg assistant">I found the issue — the auth token wasn't being persisted in localStorage. I've fixed it and added a test.</div>
+                <div class="phone-msg tool">patch_file → src/auth/storage.ts</div>
+                <div class="phone-msg assistant">All tests pass. The fix is ready to merge.</div>
+              </div>
+              <div class="phone-input"><span>Ask Localcode...</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="platform-panel" id="pp-slack">
+        <div class="pp-grid">
+          <div class="pp-info">
+            <h3>Slack Integration</h3>
+            <p>Bring Localcode to your Slack workspace. Kick off coding tasks, get PR reviews, and collaborate with your team — all from Slack.</p>
+            <div class="pp-links"><a href="#" class="btn-p">Add to Slack</a></div>
+          </div>
+          <div class="pp-demo">
+            <div class="slack-mockup">
+              <div class="slack-msg"><span class="slack-avatar">🤖</span><div class="slack-bubble"><strong>Localcode</strong><p>I've reviewed PR #234. Found 2 issues: unused imports in auth.ts and a missing error handler in the payment route. Shall I fix them?</p></div></div>
+              <div class="slack-msg"><span class="slack-avatar">👤</span><div class="slack-bubble"><strong>You</strong><p>Yes, fix both and run tests</p></div></div>
+              <div class="slack-msg"><span class="slack-avatar">🤖</span><div class="slack-bubble"><strong>Localcode</strong><p>Done! Both issues fixed, all 47 tests pass. PR updated.</p></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="install">
+  <div class="inner reveal">
+    <div class="section-label" style="justify-content:center">Get started</div>
+    <h2 style="font-size:clamp(2rem,5vw,3.2rem)">Ready to try it?</h2>
+    <div class="install-methods">
+      <div class="imethod">
+        <div class="imethod-label">Global install</div>
+        <div class="ibox">
+          <span class="icmd">npm install -g @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npm install -g @localcode/cli')">copy</button>
+        </div>
+      </div>
+      <div class="imethod">
+        <div class="imethod-label">No install</div>
+        <div class="ibox">
+          <span class="icmd">npx @localcode/cli</span>
+          <button class="cpbtn" onclick="cp(this,'npx @localcode/cli')">copy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-links">
+    <span><a href="index.html" style="color:var(--text-secondary)">Localcode</a> v4.0.0</span>
+    <a href="features.html">Features</a>
+    <a href="platforms.html">Platforms</a>
+    <a href="agents.html">Agents</a>
+    <a href="https://github.com/thealxlabs/localcode" target="_blank">⎇ GitHub</a>
+    <a href="https://npmjs.com/package/@localcode/cli" target="_blank">npm</a>
+  </div>
+  <span>Built by <a href="https://github.com/thealxlabs" target="_blank">TheAlxLabs</a> · MIT License</span>
+</footer>
+
+<script src="js/main.js"></script>
+</body>
+</html>
