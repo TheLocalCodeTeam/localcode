@@ -2,6 +2,34 @@
 // Unified streaming + agent loop client for Ollama, Claude, OpenAI, Groq
 
 import { Provider, ProviderConfig, Message, ToolCall, ModelRouting, PROVIDERS } from '../core/types.js';
+import { logger } from '../core/logger.js';
+
+// ─── Retry helper ──────────────────────────────────────────────────────────────
+
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 3000, 8000]; // exponential backoff with jitter
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  context: string,
+  signal?: AbortSignal,
+): Promise<T> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (signal?.aborted) throw new Error('Cancelled.');
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAYS[attempt] + Math.random() * 1000;
+        logger.warn(`${context} failed, retrying (attempt ${attempt + 1}/${MAX_RETRIES})`, { error: lastError.message, delay });
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError || new Error(`${context} failed after ${MAX_RETRIES + 1} attempts`);
+}
 
 export interface StreamChunk {
   type: 'text' | 'tool_call' | 'tool_result' | 'agent_step' | 'done' | 'error';
@@ -200,19 +228,24 @@ async function runOllamaAgent(
     if (signal?.aborted) { await onChunk({ type: 'error', error: 'Cancelled.' }); return; }
     await onChunk({ type: 'agent_step', step, maxSteps: agentCfg.maxSteps });
 
-    const res = await fetch(`${config.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: stepModel, messages: history, stream: true, tools }),
+    const res = await retryWithBackoff(
+      async () => {
+        const r = await fetch(`${config.baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: stepModel, messages: history, stream: true, tools }),
+          signal,
+        });
+        if (!r.ok || !r.body) {
+          throw new Error(`Ollama error ${r.status}: ${await r.text()}`);
+        }
+        return r;
+      },
+      'Ollama chat request',
       signal,
-    });
+    );
 
-    if (!res.ok || !res.body) {
-      await onChunk({ type: 'error', error: `Ollama error ${res.status}: ${await res.text()}` });
-      return;
-    }
-
-    const reader = res.body.getReader();
+    const reader = (res as Response).body!.getReader();
     const decoder = new TextDecoder();
     let buf = '';
     let assistantText = '';

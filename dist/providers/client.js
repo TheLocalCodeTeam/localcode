@@ -1,6 +1,29 @@
 // src/providers/client.ts
 // Unified streaming + agent loop client for Ollama, Claude, OpenAI, Groq
 import { PROVIDERS } from '../core/types.js';
+import { logger } from '../core/logger.js';
+// ─── Retry helper ──────────────────────────────────────────────────────────────
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 3000, 8000]; // exponential backoff with jitter
+async function retryWithBackoff(fn, context, signal) {
+    let lastError = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (signal?.aborted)
+            throw new Error('Cancelled.');
+        try {
+            return await fn();
+        }
+        catch (err) {
+            lastError = err instanceof Error ? err : new Error(String(err));
+            if (attempt < MAX_RETRIES) {
+                const delay = RETRY_DELAYS[attempt] + Math.random() * 1000;
+                logger.warn(`${context} failed, retrying (attempt ${attempt + 1}/${MAX_RETRIES})`, { error: lastError.message, delay });
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+        }
+    }
+    throw lastError || new Error(`${context} failed after ${MAX_RETRIES + 1} attempts`);
+}
 // ─── Built-in tool definitions ─────────────────────────────────────────────────
 export const BUILTIN_TOOLS = [
     {
@@ -157,16 +180,18 @@ async function runOllamaAgent(config, model, messages, onChunk, agentCfg, system
             return;
         }
         await onChunk({ type: 'agent_step', step, maxSteps: agentCfg.maxSteps });
-        const res = await fetch(`${config.baseUrl}/api/chat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: stepModel, messages: history, stream: true, tools }),
-            signal,
-        });
-        if (!res.ok || !res.body) {
-            await onChunk({ type: 'error', error: `Ollama error ${res.status}: ${await res.text()}` });
-            return;
-        }
+        const res = await retryWithBackoff(async () => {
+            const r = await fetch(`${config.baseUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: stepModel, messages: history, stream: true, tools }),
+                signal,
+            });
+            if (!r.ok || !r.body) {
+                throw new Error(`Ollama error ${r.status}: ${await r.text()}`);
+            }
+            return r;
+        }, 'Ollama chat request', signal);
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';

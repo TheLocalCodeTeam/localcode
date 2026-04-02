@@ -4,6 +4,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { pathToFileURL } from 'url';
+import { logger } from '../core/logger.js';
 
 export interface PluginContext {
   workingDir: string;
@@ -34,8 +36,8 @@ export async function loadPlugins(): Promise<LocalCodePlugin[]> {
     for (const file of files) {
       const filePath = path.join(PLUGINS_DIR, file);
       try {
-        // Dynamic import using file URL for ESM compatibility
-        const fileUrl = new URL(`file://${filePath}`);
+        // Dynamic import using pathToFileURL for cross-platform compatibility
+        const fileUrl = pathToFileURL(filePath);
         const mod = await import(fileUrl.href) as { default?: LocalCodePlugin };
         const plugin = mod.default;
 
@@ -47,13 +49,14 @@ export async function loadPlugins(): Promise<LocalCodePlugin[]> {
           typeof plugin.execute === 'function'
         ) {
           plugins.push(plugin);
+          logger.info('Plugin loaded', { name: plugin.name, trigger: plugin.trigger });
         }
-      } catch {
-        // Skip invalid plugins silently
+      } catch (err) {
+        logger.warn('Failed to load plugin', { file, error: err instanceof Error ? err.message : String(err) });
       }
     }
-  } catch {
-    // If we can't read plugins dir, just return empty
+  } catch (err) {
+    logger.warn('Could not read plugins directory', { error: err instanceof Error ? err.message : String(err) });
   }
 
   return plugins;

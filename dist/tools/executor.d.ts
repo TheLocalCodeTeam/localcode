@@ -19,5 +19,14 @@ export declare class ToolExecutor {
     getSessionFiles(): Record<string, string>;
     undoLastChange(): string | null;
     unifiedDiff(filePath: string): string | null;
+    /**
+     * Clear tracked session files to free memory.
+     * Call this after a session is saved or compacted.
+     */
+    clearSessionFiles(): void;
+    /**
+     * Get the number of tracked session files.
+     */
+    getSessionFileCount(): number;
 }
 //# sourceMappingURL=executor.d.ts.map

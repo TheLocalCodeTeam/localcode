@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { execFile } from 'child_process';
 import { ToolCall, ToolResult, FileDiff } from '../core/types.js';
+import { logger } from '../core/logger.js';
 
 function buildDiff(filePath: string, before: string, after: string): FileDiff {
   const beforeLines = before.split('\n');
@@ -31,23 +32,29 @@ export class ToolExecutor {
   }
 
   async execute(tool: ToolCall): Promise<ToolResult> {
+    logger.debug('Executing tool', { tool: tool.name });
     try {
-      switch (tool.name) {
-        case 'read_file':    return this.readFile(tool.args as { path: string });
-        case 'write_file':   return this.writeFile(tool.args as { path: string; content: string });
-        case 'patch_file':   return this.patchFile(tool.args as { path: string; old_str: string; new_str: string });
-        case 'delete_file':  return this.deleteFile(tool.args as { path: string });
-        case 'move_file':    return this.moveFile(tool.args as { source: string; destination: string });
-        case 'run_shell':    return this.runShell(tool.args as { command: string; cwd?: string });
-        case 'list_dir':     return this.listDir(tool.args as { path: string; recursive?: boolean });
-        case 'search_files': return this.searchFiles(tool.args as { pattern: string; path?: string; case_insensitive?: boolean });
-        case 'find_files':   return this.findFiles(tool.args as { pattern: string; path?: string });
-        case 'git_operation': return this.gitOperation(tool.args as { args: string });
-        default:
-          return { success: false, output: `Unknown tool: ${tool.name}` };
-      }
+      const result = await (async () => {
+        switch (tool.name) {
+          case 'read_file':    return this.readFile(tool.args as { path: string });
+          case 'write_file':   return this.writeFile(tool.args as { path: string; content: string });
+          case 'patch_file':   return this.patchFile(tool.args as { path: string; old_str: string; new_str: string });
+          case 'delete_file':  return this.deleteFile(tool.args as { path: string });
+          case 'move_file':    return this.moveFile(tool.args as { source: string; destination: string });
+          case 'run_shell':    return this.runShell(tool.args as { command: string; cwd?: string });
+          case 'list_dir':     return this.listDir(tool.args as { path: string; recursive?: boolean });
+          case 'search_files': return this.searchFiles(tool.args as { pattern: string; path?: string; case_insensitive?: boolean });
+          case 'find_files':   return this.findFiles(tool.args as { pattern: string; path?: string });
+          case 'git_operation': return this.gitOperation(tool.args as { args: string });
+          default:
+            return { success: false, output: `Unknown tool: ${tool.name}` };
+        }
+      })();
+      logger.debug('Tool execution complete', { tool: tool.name, success: result.success });
+      return result;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      logger.error('Tool execution failed', { tool: tool.name, error: msg });
       return { success: false, output: `Tool error: ${msg}` };
     }
   }
@@ -138,8 +145,36 @@ export class ToolExecutor {
 
   private runShell(args: { command: string; cwd?: string }): Promise<ToolResult> {
     const cwd = args.cwd ? this.resolvePath(args.cwd) : this.workingDir;
+
+    // Enforce blocked commands
+    const blockedPatterns = [
+      'rm -rf /',
+      'rm -rf /*',
+      'mkfs',
+      'dd if=',
+      'shutdown',
+      'reboot',
+      'curl * | sh',
+      'curl *|sh',
+      'wget * | sh',
+      'wget *|sh',
+      ':(){:|:&};:',
+      'chmod -R 777 /',
+      'chmod -R 777 /*',
+      '> /dev/sda',
+      '> /dev/disk',
+    ];
+
+    const cmdLower = args.command.toLowerCase().replace(/\s+/g, ' ').trim();
+    for (const pattern of blockedPatterns) {
+      const normalizedPattern = pattern.toLowerCase().replace(/\s+/g, ' ');
+      if (cmdLower.includes(normalizedPattern) || cmdLower.includes(normalizedPattern.replace(' ', ''))) {
+        return Promise.resolve({ success: false, output: `Blocked: command contains dangerous pattern "${pattern}"` });
+      }
+    }
+
     return new Promise((resolve) => {
-      execFile('sh', ['-c', args.command], { cwd, timeout: 30000 }, (err, stdout, stderr) => {
+      execFile('sh', ['-c', args.command], { cwd, timeout: 30000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
         const output = [stdout, stderr].filter(Boolean).join('\n').trim();
         if (err) {
           resolve({ success: false, output: output || err.message });
@@ -314,5 +349,23 @@ export class ToolExecutor {
     }
 
     return hunks.join('\n');
+  }
+
+  /**
+   * Clear tracked session files to free memory.
+   * Call this after a session is saved or compacted.
+   */
+  clearSessionFiles(): void {
+    const count = Object.keys(this.sessionFiles).length;
+    this.sessionFiles = {};
+    this.changeHistory = [];
+    logger.info('Cleared session files', { count });
+  }
+
+  /**
+   * Get the number of tracked session files.
+   */
+  getSessionFileCount(): number {
+    return Object.keys(this.sessionFiles).length;
   }
 }

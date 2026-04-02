@@ -1,5 +1,5 @@
 // src/ui/App.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Component } from 'react';
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
 import { execFile, execFileSync } from 'child_process';
@@ -28,6 +28,21 @@ import { getOrchestrator } from '../agents/orchestrator.js';
 import { AgentPicker } from './AgentPicker.js';
 // ─── Spinner ──────────────────────────────────────────────────────────────────
 const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+class ErrorBoundary extends Component {
+    state = { hasError: false, error: '' };
+    static getDerivedStateFromError(err) {
+        return { hasError: true, error: err.message };
+    }
+    render() {
+        if (this.state.hasError) {
+            return (React.createElement(Box, { flexDirection: "column", paddingX: 2, paddingY: 1 },
+                React.createElement(Text, { color: "red", bold: true }, "Localcode crashed"),
+                React.createElement(Text, { color: "gray", wrap: "wrap" }, this.state.error),
+                React.createElement(Text, { color: "gray", dimColor: true }, "Press Enter to exit and save session.")));
+        }
+        return this.props.children;
+    }
+}
 export function App({ initialState }) {
     const { exit } = useApp();
     const { stdout } = useStdout();
@@ -323,10 +338,10 @@ export function App({ initialState }) {
                                         },
                                     ],
                                 };
-                                setTimeout(() => { try {
+                                try {
                                     saveSession(next);
                                 }
-                                catch { /* non-critical */ } }, 0);
+                                catch { /* non-critical */ }
                                 return next;
                             });
                         }
@@ -2430,43 +2445,44 @@ ${msgHtml}
     const termHeight = stdout?.rows ?? 24;
     const maxMessages = Math.max(5, termHeight - 12);
     const borderColor = isStreaming ? 'gray' : isMultiline ? theme.tool : theme.border;
-    return (React.createElement(Box, { flexDirection: "column", height: termHeight },
-        React.createElement(NyxHeader, { mood: mood, provider: session.provider, model: session.model, workingDir: session.workingDir, tokenCount: estimateTokens(session.messages), approvalMode: session.approvalMode, persona: session.activePersona, sessionCost: session.sessionCost, version: pkg.version, liveTokens: isStreaming ? streamingTokens : undefined }),
-        React.createElement(Box, { flexDirection: "column", flexGrow: 1, overflowY: "hidden" }, displayMessages.slice(-maxMessages).map((msg) => (React.createElement(MessageRow, { key: msg.id, msg: msg, spinnerFrame: spinnerFrame, theme: theme })))),
-        pendingPermission && (React.createElement(PermissionPrompt, { toolCall: pendingPermission.toolCall })),
-        showPicker && (React.createElement(CommandPicker, { query: pickerQuery, selectedIndex: pickerSelectedIndex, onSelect: (cmd) => {
-                setInput('');
-                setShowPicker(false);
-                handleSlashCommand(cmd.trigger);
-            }, onDismiss: () => { setShowPicker(false); setInput(''); } })),
-        showAgentPicker && (() => {
-            const registry = getAgentRegistry();
-            return (React.createElement(AgentPicker, { categories: registry.categories, allAgents: registry.allAgents, query: agentPickerQuery, selectedIndex: agentPickerSelectedIndex, onSelect: (agent) => {
-                    setActiveAgent(agent);
-                    const enhancedPrompt = `${session.systemPrompt}\n\n---\nActive Agent: ${agent.name}\n${agent.vibe ? `Vibe: ${agent.vibe}\n` : ''}${agent.prompt}`;
-                    setSession((s) => ({ ...s, systemPrompt: enhancedPrompt }));
-                    setShowAgentPicker(false);
+    return (React.createElement(ErrorBoundary, { onExit: exit },
+        React.createElement(Box, { flexDirection: "column", height: termHeight },
+            React.createElement(NyxHeader, { mood: mood, provider: session.provider, model: session.model, workingDir: session.workingDir, tokenCount: estimateTokens(session.messages), approvalMode: session.approvalMode, persona: session.activePersona, sessionCost: session.sessionCost, version: pkg.version, liveTokens: isStreaming ? streamingTokens : undefined }),
+            React.createElement(Box, { flexDirection: "column", flexGrow: 1, overflowY: "hidden" }, displayMessages.slice(-maxMessages).map((msg) => (React.createElement(MessageRow, { key: msg.id, msg: msg, spinnerFrame: spinnerFrame, theme: theme })))),
+            pendingPermission && (React.createElement(PermissionPrompt, { toolCall: pendingPermission.toolCall })),
+            showPicker && (React.createElement(CommandPicker, { query: pickerQuery, selectedIndex: pickerSelectedIndex, onSelect: (cmd) => {
                     setInput('');
-                    sysMsg(`🤖 Agent activated: ${agent.emoji || '🤖'} ${agent.name}\n${agent.description}`);
-                }, onDismiss: () => { setShowAgentPicker(false); setInput(''); } }));
-        })(),
-        React.createElement(Box, { borderStyle: "round", borderColor: borderColor, paddingX: 1, flexDirection: "row" },
-            React.createElement(Text, { color: borderColor }, isStreaming ? `${SPINNER_FRAMES[spinnerFrame]} ` : isMultiline ? '¶ ' : '❯ '),
-            isMultiline ? (React.createElement(Box, { flexDirection: "column" },
-                multilineBuffer.map((line, i) => (React.createElement(Box, { key: i, flexDirection: "row" },
-                    React.createElement(Text, { color: "gray", dimColor: true },
-                        String(i + 1).padStart(2, ' '),
-                        " \u2502 "),
-                    React.createElement(Text, { color: "white", wrap: "wrap" }, line)))),
-                React.createElement(Box, { flexDirection: "row" },
-                    React.createElement(Text, { color: "gray", dimColor: true },
-                        String(multilineBuffer.length + 1).padStart(2, ' '),
-                        " \u2502 "),
-                    React.createElement(TextInput, { value: input, onChange: handleInputChange, onSubmit: handleSubmit, placeholder: "\u2026" })),
-                React.createElement(Text, { color: "gray", dimColor: true }, "  ctrl+d send  ctrl+e cancel"))) : isStreaming ? (React.createElement(Text, { color: "gray", dimColor: true }, "Generating\u2026")) : (React.createElement(TextInput, { value: input, onChange: handleInputChange, onSubmit: handleSubmit, placeholder: "Message Nyx\u2026  (/ for commands)" }))),
-        React.createElement(Box, { flexDirection: "row", justifyContent: "space-between" },
-            React.createElement(Text, { color: "gray", dimColor: true }, '  ctrl+c exit  esc cancel  ctrl+e multiline  / commands  @file context  ↑↓ history'),
-            input.length > 50 && (React.createElement(Text, { color: input.length > 2000 ? 'yellow' : 'gray', dimColor: true }, `${input.length}c  `)))));
+                    setShowPicker(false);
+                    handleSlashCommand(cmd.trigger);
+                }, onDismiss: () => { setShowPicker(false); setInput(''); } })),
+            showAgentPicker && (() => {
+                const registry = getAgentRegistry();
+                return (React.createElement(AgentPicker, { categories: registry.categories, allAgents: registry.allAgents, query: agentPickerQuery, selectedIndex: agentPickerSelectedIndex, onSelect: (agent) => {
+                        setActiveAgent(agent);
+                        const enhancedPrompt = `${session.systemPrompt}\n\n---\nActive Agent: ${agent.name}\n${agent.vibe ? `Vibe: ${agent.vibe}\n` : ''}${agent.prompt}`;
+                        setSession((s) => ({ ...s, systemPrompt: enhancedPrompt }));
+                        setShowAgentPicker(false);
+                        setInput('');
+                        sysMsg(`🤖 Agent activated: ${agent.emoji || '🤖'} ${agent.name}\n${agent.description}`);
+                    }, onDismiss: () => { setShowAgentPicker(false); setInput(''); } }));
+            })(),
+            React.createElement(Box, { borderStyle: "round", borderColor: borderColor, paddingX: 1, flexDirection: "row" },
+                React.createElement(Text, { color: borderColor }, isStreaming ? `${SPINNER_FRAMES[spinnerFrame]} ` : isMultiline ? '¶ ' : '❯ '),
+                isMultiline ? (React.createElement(Box, { flexDirection: "column" },
+                    multilineBuffer.map((line, i) => (React.createElement(Box, { key: i, flexDirection: "row" },
+                        React.createElement(Text, { color: "gray", dimColor: true },
+                            String(i + 1).padStart(2, ' '),
+                            " \u2502 "),
+                        React.createElement(Text, { color: "white", wrap: "wrap" }, line)))),
+                    React.createElement(Box, { flexDirection: "row" },
+                        React.createElement(Text, { color: "gray", dimColor: true },
+                            String(multilineBuffer.length + 1).padStart(2, ' '),
+                            " \u2502 "),
+                        React.createElement(TextInput, { value: input, onChange: handleInputChange, onSubmit: handleSubmit, placeholder: "\u2026" })),
+                    React.createElement(Text, { color: "gray", dimColor: true }, "  ctrl+d send  ctrl+e cancel"))) : isStreaming ? (React.createElement(Text, { color: "gray", dimColor: true }, "Generating\u2026")) : (React.createElement(TextInput, { value: input, onChange: handleInputChange, onSubmit: handleSubmit, placeholder: "Message Nyx\u2026  (/ for commands)" }))),
+            React.createElement(Box, { flexDirection: "row", justifyContent: "space-between" },
+                React.createElement(Text, { color: "gray", dimColor: true }, '  ctrl+c exit  esc cancel  ctrl+e multiline  / commands  @file context  ↑↓ history'),
+                input.length > 50 && (React.createElement(Text, { color: input.length > 2000 ? 'yellow' : 'gray', dimColor: true }, `${input.length}c  `))))));
 }
 function MessageRow({ msg, spinnerFrame, theme, }) {
     const roleColors = {

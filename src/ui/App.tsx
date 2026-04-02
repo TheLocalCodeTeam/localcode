@@ -1,6 +1,6 @@
 // src/ui/App.tsx
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Component, type ReactNode } from 'react';
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
 import TextInput from 'ink-text-input';
 import { execFile, execFileSync } from 'child_process';
@@ -87,6 +87,28 @@ const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', 
 
 interface AppProps {
   initialState: SessionState;
+}
+
+// ── Error Boundary ──────────────────────────────────────────────────────────────
+
+interface EBState { hasError: boolean; error: string }
+class ErrorBoundary extends Component<{ children: ReactNode; onExit: () => void }, EBState> {
+  state: EBState = { hasError: false, error: '' };
+  static getDerivedStateFromError(err: Error): EBState {
+    return { hasError: true, error: err.message };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Box flexDirection="column" paddingX={2} paddingY={1}>
+          <Text color="red" bold>Localcode crashed</Text>
+          <Text color="gray" wrap="wrap">{this.state.error}</Text>
+          <Text color="gray" dimColor>Press Enter to exit and save session.</Text>
+        </Box>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 export function App({ initialState }: AppProps): React.ReactElement {
@@ -424,7 +446,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
                       },
                     ],
                   };
-                  setTimeout(() => { try { saveSession(next); } catch { /* non-critical */ } }, 0);
+                  try { saveSession(next); } catch { /* non-critical */ }
                   return next;
                 });
               }
@@ -2566,7 +2588,8 @@ ${msgHtml}
   const borderColor = isStreaming ? 'gray' : isMultiline ? theme.tool : theme.border;
 
   return (
-    <Box flexDirection="column" height={termHeight}>
+    <ErrorBoundary onExit={exit}>
+      <Box flexDirection="column" height={termHeight}>
       {/* Header */}
       <NyxHeader
         mood={mood}
@@ -2677,6 +2700,7 @@ ${msgHtml}
         )}
       </Box>
     </Box>
+    </ErrorBoundary>
   );
 }
 
