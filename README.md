@@ -531,4 +531,4 @@ To report a vulnerability, email security@thealxlabs.com.
 
 MIT — See [LICENSE](LICENSE) for details.
 
-Built with by [TheAlxLabs](https://github.com/thealxlabs)
+Built with ❤️ by [TheAlxLabs](https://github.com/thealxlabs)
