@@ -7,9 +7,11 @@ import { logger } from '../core/logger.js';
 // ─── Retry helper ──────────────────────────────────────────────────────────────
 
 const MAX_RETRIES = 3;
-const RETRY_DELAYS = [1000, 3000, 8000]; // exponential backoff with jitter
+const RETRY_DELAYS = process.env.NODE_ENV === 'test'
+  ? [10, 20, 30] // Fast retries in tests
+  : [1000, 3000, 8000]; // exponential backoff with jitter in production
 
-async function retryWithBackoff<T>(
+export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   context: string,
   signal?: AbortSignal,

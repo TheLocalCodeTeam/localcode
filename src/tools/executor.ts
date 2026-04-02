@@ -7,6 +7,7 @@ import * as os from 'os';
 import { execFile } from 'child_process';
 import { ToolCall, ToolResult, FileDiff } from '../core/types.js';
 import { logger } from '../core/logger.js';
+import { withFileLock } from '../core/lock.js';
 
 function buildDiff(filePath: string, before: string, after: string): FileDiff {
   const beforeLines = before.split('\n');
