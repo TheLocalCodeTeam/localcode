@@ -56,6 +56,7 @@ import { buildIndex, searchWithContext, SearchIndex } from '../search/tfidf.js';
 import { runSwarm } from '../agents/swarm.js';
 import { detectTestCommand, runTestLoop } from '../agents/testloop.js';
 import { runBenchmark, buildTargets } from '../agents/benchmark.js';
+import { runAllBenchmarks, formatBenchmark, generateBenchmarkReport } from '../benchmarks/index.js';
 import { getAgentRegistry, reloadAgentRegistry } from '../agents/registry/loader.js';
 import { getOrchestrator } from '../agents/orchestrator.js';
 import type { AgentDefinition } from '../agents/registry/types.js';
@@ -2251,12 +2252,29 @@ ${msgHtml}
         const costCheck = rl.checkCostLimit(session.sessionCost);
         sysMsg(
           `Rate Limit Status\n` +
-          `  Requests/min:    ${stats.requestsThisMinute} / ${rl.constructor.name === 'RateLimiter' ? '60' : '60'}\n` +
+          `  Requests/min:    ${stats.requestsThisMinute} / 60\n` +
           `  Tokens/hour:     ${stats.tokensThisHour.toLocaleString()} / 100,000\n` +
           `  Tokens remaining: ${stats.hourRemaining.toLocaleString()}\n` +
           `  Session cost:    $${session.sessionCost.toFixed(4)} ${costCheck.allowed ? '✓' : `⚠ ${costCheck.reason}`}\n\n` +
           `Limits: 60 req/min, 100k tokens/hr, $10/session`,
         );
+        return;
+      }
+
+      case '/benchmarks': {
+        trackCommand(cmd, args);
+        sysMsg('Running benchmarks…');
+        setMood('thinking');
+        try {
+          const results = await runAllBenchmarks();
+          const report = results.map(r => formatBenchmark(r)).join('\n\n');
+          const reportPath = path.join(session.workingDir, 'benchmarks.md');
+          fs.writeFileSync(reportPath, generateBenchmarkReport(results), 'utf8');
+          sysMsg(`Benchmarks complete!\n\n${report}\n\nReport saved to ${reportPath}`);
+        } catch (err) {
+          sysMsg(`Benchmarks failed: ${err instanceof Error ? err.message : String(err)}`, true);
+        }
+        setMood('idle');
         return;
       }
 

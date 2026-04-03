@@ -1,31 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "**/*",
-      "use": "@vercel/static"
-    }
-  ],
+  "builds": [{ "src": "**/*", "use": "@vercel/static" }],
   "cleanUrls": true,
   "trailingSlash": false,
-  "routes": [
-    {
-      "src": "/css/(.*)",
-      "dest": "/css/$1"
-    },
-    {
-      "src": "/js/(.*)",
-      "dest": "/js/$1"
-    },
-    {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
-    },
-    {
-      "src": "/docs/(.*)",
-      "dest": "/docs/$1"
-    }
-  ],
   "headers": [
     {
       "source": "/css/(.*)",
