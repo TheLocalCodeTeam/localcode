@@ -1,6 +1,6 @@
 import { logger } from '../core/logger.js';
 import type { AgentDefinition } from './registry/types.js'
-import type { Message, Provider, ToolCall } from '../core/types.js'
+import type { Message, Provider, ToolCall } from '../types/index.js'
 import { getAgentRegistry } from './registry/loader.js'
 import { runAgent, AgentConfig, BUILTIN_TOOLS, streamProvider } from '../providers/client.js'
 import { ToolExecutor } from '../tools/executor.js'

@@ -1,7 +1,7 @@
 // src/agents/autoDispatch.ts
 
 import type { AgentDefinition } from './registry/types.js';
-import type { Message, Provider } from '../core/types.js';
+import type { Message, Provider } from '../types/index.js';
 import type { Settings } from '../settings/types.js';
 import { getAgentRegistry } from './registry/loader.js';
 import { getOrchestrator } from './orchestrator.js';

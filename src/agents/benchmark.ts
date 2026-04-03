@@ -1,7 +1,7 @@
 // src/agents/benchmark.ts
 // Run the same prompt across all configured providers and compare results.
 
-import { Provider, PROVIDERS } from '../core/types.js';
+import { Provider, PROVIDERS } from '../types/index.js';
 import { streamProvider, estimateCost } from '../providers/client.js';
 
 export interface BenchmarkResult {

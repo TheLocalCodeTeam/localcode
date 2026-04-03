@@ -2,8 +2,8 @@ import { logger } from '../core/logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { SessionState, Checkpoint, Provider, Message, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
-import { PROVIDERS } from '../core/types.js';
+import { SessionState, Checkpoint, Provider, Message, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../types/index.js';
+import { PROVIDERS } from '../types/index.js';
 
 const SESSION_DIR = path.join(os.homedir(), '.localcode');
 const STATE_FILE  = path.join(SESSION_DIR, 'session.json');

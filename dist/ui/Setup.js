@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import { PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../core/types.js';
+import { PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS } from '../types/index.js';
 import { saveSession } from '../sessions/manager.js';
 import { exec } from 'child_process';
 const PROVIDER_OPTIONS = [

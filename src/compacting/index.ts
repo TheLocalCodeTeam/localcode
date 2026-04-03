@@ -1,9 +1,9 @@
 // src/compacting/index.ts
 // Conversation compacting to manage context window limits
 
-import type { Message } from '../core/types.js';
+import type { Message } from '../types/index.js';
 import { streamProvider } from '../providers/client.js';
-import type { Provider } from '../core/types.js';
+import type { Provider } from '../types/index.js';
 import { logger } from '../core/logger.js';
 
 export interface CompactConfig {

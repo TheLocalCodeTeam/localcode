@@ -1,5 +1,5 @@
 import React from 'react';
-import { NyxMood, Provider, ApprovalMode } from '../core/types.js';
+import { NyxMood, Provider, ApprovalMode } from '../types/index.js';
 interface NyxHeaderProps {
     mood: NyxMood;
     provider: Provider;

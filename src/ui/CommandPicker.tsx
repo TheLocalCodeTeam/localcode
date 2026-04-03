@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
-import { SlashCommand, SLASH_COMMANDS } from '../core/types.js';
+import { SlashCommand, SLASH_COMMANDS } from '../types/index.js';
 
 const CATEGORY_META: Record<string, { label: string; color: string; icon: string }> = {
   session:   { label: 'SESSION',   color: 'cyan',    icon: '◈' },

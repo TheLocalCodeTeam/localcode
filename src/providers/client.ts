@@ -1,7 +1,7 @@
 // src/providers/client.ts
 // Unified streaming + agent loop client for Ollama, Claude, OpenAI, Groq
 
-import { Provider, ProviderConfig, Message, ToolCall, ModelRouting, PROVIDERS } from '../core/types.js';
+import { Provider, ProviderConfig, Message, ToolCall, ModelRouting, PROVIDERS } from '../types/index.js';
 import { logger } from '../core/logger.js';
 
 // ─── Retry helper ──────────────────────────────────────────────────────────────

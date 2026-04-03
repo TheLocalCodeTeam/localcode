@@ -6,7 +6,7 @@ import { render } from 'ink';
 import { App } from '../ui/App.js';
 import { Setup } from '../ui/Setup.js';
 import { loadSession, isFirstRun } from '../sessions/manager.js';
-import { SessionState } from '../core/types.js';
+import { SessionState } from '../types/index.js';
 import { createRequire } from 'module';
 import { trackSessionStart, trackSessionEnd, flushTelemetry, trackError } from '../telemetry/index.js';
 import { runAllBenchmarks, formatBenchmark, generateBenchmarkReport } from '../benchmarks/index.js';

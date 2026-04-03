@@ -2,7 +2,7 @@ import { logger } from '../core/logger.js';
 // src/agents/swarm.ts
 // Parallel agent swarm — splits a task into N subtasks and runs them concurrently.
 
-import { Provider, ToolCall } from '../core/types.js';
+import { Provider, ToolCall } from '../types/index.js';
 import { runAgent, AgentConfig, BUILTIN_TOOLS, streamProvider } from '../providers/client.js';
 import { ToolExecutor } from '../tools/executor.js';
 

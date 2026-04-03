@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Box, Text } from 'ink';
-import { NyxMood, Provider, PROVIDERS, ApprovalMode } from '../core/types.js';
+import { NyxMood, Provider, PROVIDERS, ApprovalMode } from '../types/index.js';
 
 const NYX_ART: Record<NyxMood, string[]> = {
   idle:     [' /\\_/\\ ', '( ·.· )', ' > ♥ < '],

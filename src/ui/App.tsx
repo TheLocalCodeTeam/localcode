@@ -26,7 +26,7 @@ import {
   ApprovalMode,
   THEMES,
   ThemeName,
-} from '../core/types.js';
+} from '../types/index.js';
 import { NyxHeader } from './NyxHeader.js';
 import { CommandPicker } from './CommandPicker.js';
 import { PermissionPrompt, needsApproval } from './PermissionPrompt.js';

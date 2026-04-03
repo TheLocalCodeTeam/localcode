@@ -1,7 +1,7 @@
 // src/ui/NyxHeader.tsx
 import React from 'react';
 import { Box, Text } from 'ink';
-import { PROVIDERS } from '../core/types.js';
+import { PROVIDERS } from '../types/index.js';
 const NYX_ART = {
     idle: [' /\\_/\\ ', '( ·.· )', ' > ♥ < '],
     thinking: [' /\\_/\\ ', '( ?.? )', ' > ~ < '],

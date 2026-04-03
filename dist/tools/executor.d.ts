@@ -1,4 +1,4 @@
-import { ToolCall, ToolResult } from '../core/types.js';
+import { ToolCall, ToolResult } from '../types/index.js';
 export declare class ToolExecutor {
     private workingDir;
     private sessionFiles;

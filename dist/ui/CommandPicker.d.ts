@@ -1,5 +1,5 @@
 import React from 'react';
-import { SlashCommand } from '../core/types.js';
+import { SlashCommand } from '../types/index.js';
 interface CommandPickerProps {
     query: string;
     selectedIndex: number;

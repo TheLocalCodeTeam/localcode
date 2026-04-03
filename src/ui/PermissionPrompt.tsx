@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Box, Text } from 'ink';
-import { ToolCall, ApprovalMode } from '../core/types.js';
+import { ToolCall, ApprovalMode } from '../types/index.js';
 
 interface PermissionPromptProps {
   toolCall: ToolCall;

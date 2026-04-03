@@ -10,7 +10,7 @@ import * as os from 'os';
 import { createRequire } from 'module';
 const _require = createRequire(import.meta.url);
 const pkg = _require('../../package.json');
-import { PROVIDERS, SLASH_COMMANDS, THEMES, } from '../core/types.js';
+import { PROVIDERS, SLASH_COMMANDS, THEMES, } from '../types/index.js';
 import { NyxHeader } from './NyxHeader.js';
 import { CommandPicker } from './CommandPicker.js';
 import { PermissionPrompt, needsApproval } from './PermissionPrompt.js';

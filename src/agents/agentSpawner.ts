@@ -1,7 +1,7 @@
 // src/agents/agentSpawner.ts
 // Real independent agent spawning system
 
-import type { Provider, Message, ToolCall } from '../core/types.js';
+import type { Provider, Message, ToolCall } from '../types/index.js';
 import { runAgent, AgentConfig, BUILTIN_TOOLS, streamProvider } from '../providers/client.js';
 import { ToolExecutor } from '../tools/executor.js';
 import { getAgentRegistry } from './registry/loader.js';

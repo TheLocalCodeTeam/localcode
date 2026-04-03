@@ -1,5 +1,5 @@
 import React from 'react';
-import { SessionState } from '../core/types.js';
+import { SessionState } from '../types/index.js';
 interface SetupProps {
     onComplete: (session: SessionState) => void;
 }

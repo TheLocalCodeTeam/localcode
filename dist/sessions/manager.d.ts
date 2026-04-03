@@ -1,4 +1,4 @@
-import { SessionState, Checkpoint, Message } from '../core/types.js';
+import { SessionState, Checkpoint, Message } from '../types/index.js';
 export interface HookEntry {
     matcher?: string;
     command: string;

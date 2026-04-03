@@ -1,4 +1,4 @@
-import { Provider, Message, ToolCall, ModelRouting } from '../core/types.js';
+import { Provider, Message, ToolCall, ModelRouting } from '../types/index.js';
 export declare function retryWithBackoff<T>(fn: () => Promise<T>, context: string, signal?: AbortSignal): Promise<T>;
 export interface StreamChunk {
     type: 'text' | 'tool_call' | 'tool_result' | 'agent_step' | 'done' | 'error';

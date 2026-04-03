@@ -1,7 +1,7 @@
 // src/ui/CommandPicker.tsx — Professional command palette (Claude Code style)
 import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
-import { SLASH_COMMANDS } from '../core/types.js';
+import { SLASH_COMMANDS } from '../types/index.js';
 const CATEGORY_META = {
     session: { label: 'SESSION', color: 'cyan', icon: '◈' },
     context: { label: 'CONTEXT', color: 'blue', icon: '◉' },

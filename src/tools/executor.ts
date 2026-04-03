@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { execFile } from 'child_process';
-import { ToolCall, ToolResult, FileDiff } from '../core/types.js';
+import { ToolCall, ToolResult, FileDiff } from '../types/index.js';
 import { logger } from '../core/logger.js';
 import { withFileLock } from '../core/lock.js';
 import { classifyCommand, getCommandClassification, isCommandAllowed } from '../security/index.js';

@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import TextInput from 'ink-text-input';
-import { SessionState, Provider, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS, ApprovalMode } from '../core/types.js';
+import { SessionState, Provider, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_PERSONAS, ApprovalMode } from '../types/index.js';
 import { saveSession } from '../sessions/manager.js';
 import { exec } from 'child_process';
 
