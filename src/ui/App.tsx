@@ -60,6 +60,10 @@ import { getAgentRegistry, reloadAgentRegistry } from '../agents/registry/loader
 import { getOrchestrator } from '../agents/orchestrator.js';
 import type { AgentDefinition } from '../agents/registry/types.js';
 import { AgentPicker } from './AgentPicker.js';
+import { trackCommand, trackToolUse, trackError, getTelemetryConfig, setTelemetryEnabled } from '../telemetry/index.js';
+import { compactConversation, buildCompactedMessages, needsCompacting } from '../compacting/index.js';
+import { getDiffSummary } from '../diff/index.js';
+import { createRateLimiter, RateLimiter } from '../rate-limit/index.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -158,6 +162,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
   // v4 refs
   const autopilotWatcherRef = useRef<fs.FSWatcher | null>(null);
   const safeStashRef        = useRef<string | null>(null);   // stash name when safeMode active
+  const rateLimiterRef      = useRef<RateLimiter>(createRateLimiter());
 
   // Derive current theme
   const theme = THEMES[session.theme ?? 'dark'];
@@ -330,6 +335,15 @@ export function App({ initialState }: AppProps): React.ReactElement {
     const now = Date.now();
     if (now - lastSendTimeRef.current < 500) return;
     lastSendTimeRef.current = now;
+
+    // Rate limiter check
+    const rateCheck = rateLimiterRef.current.canMakeRequest();
+    if (!rateCheck.allowed) {
+      const retrySec = rateCheck.retryAfter ? (rateCheck.retryAfter / 1000).toFixed(1) : '?';
+      sysMsg(`⚠ Rate limited (${rateCheck.reason}). Retry in ${retrySec}s.`, true);
+      trackError(new Error(`Rate limited: ${rateCheck.reason}`), { context: 'sendMessage' });
+      return;
+    }
 
     // Add to history
     const newHistory = [text, ...history.slice(0, 199)];
@@ -537,9 +551,23 @@ export function App({ initialState }: AppProps): React.ReactElement {
               const d = diff as { path: string; additions: number; deletions: number };
               addDisplay({ role: 'system', content: `  ${d.path}  +${d.additions} -${d.deletions}` });
             }
+            // Show diff summary for file-modifying tools
+            const writeTools = new Set(['write_file', 'patch_file', 'delete_file']);
+            if (writeTools.has(toolCall.name)) {
+              const sessionFiles = executorRef.current.getSessionFiles();
+              const allDiffs = Object.entries(sessionFiles)
+                .map(([fp]) => executorRef.current.unifiedDiff(fp))
+                .filter(Boolean)
+                .join('\n');
+              if (allDiffs) {
+                const summary = getDiffSummary(allDiffs);
+                addDisplay({ role: 'system', content: `📝 ${summary}` });
+              }
+            }
           },
           executeTool: async (toolCall: ToolCall) => {
             await runHooks('PreToolUse', toolCall);
+            const toolStart = Date.now();
 
             let result: { success: boolean; output: string };
             if (mcpRef.current.isMcpTool(toolCall.name)) {
@@ -548,6 +576,9 @@ export function App({ initialState }: AppProps): React.ReactElement {
             } else {
               result = await executorRef.current.execute(toolCall);
             }
+
+            const durationMs = Date.now() - toolStart;
+            trackToolUse(toolCall.name, result.success, durationMs);
 
             await runHooks('PostToolUse', toolCall, result.output);
             return result;
@@ -560,6 +591,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
 
     try {
       await run();
+      rateLimiterRef.current.recordRequest(streamingTokens);
 
       // ── Safe mode: post-run test check ──────────────────────────────────
       if (currentSession.safeMode && safeStashRef.current) {
@@ -579,8 +611,10 @@ export function App({ initialState }: AppProps): React.ReactElement {
         }
       }
     } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      trackError(error, { context: 'sendMessage', provider: currentSession.provider, model: currentSession.model });
       updateDisplay(streamId, {
-        content: `Error: ${err instanceof Error ? err.message : String(err)}`,
+        content: `Error: ${error.message}`,
         streaming: false,
         isError: true,
       });
@@ -621,6 +655,8 @@ export function App({ initialState }: AppProps): React.ReactElement {
 
     switch (cmd) {
       case '/help': {
+        trackCommand(cmd, args);
+        trackCommand(cmd, args);
         setShowPicker(true);
         setPickerQuery('');
         setPickerSelectedIndex(0);
@@ -629,6 +665,8 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/clear': {
+        trackCommand(cmd, args);
+        trackCommand(cmd, args);
         setDisplayMessages([]);
         setSession((s) => ({ ...s, messages: [] }));
         setMood('idle');
@@ -637,6 +675,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/theme': {
+        trackCommand(cmd, args);
         const validThemes: ThemeName[] = ['dark', 'nord', 'monokai', 'light'];
         if (!args) {
           const list = validThemes.map((t) => `  ${session.theme === t ? '▶ ' : '  '}${t}`).join('\n');
@@ -653,6 +692,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/template': {
+        trackCommand(cmd, args);
         const tParts = args.split(/\s+/);
         const tSub = tParts[0]?.toLowerCase() ?? '';
         const tRest = tParts.slice(1).join(' ');
@@ -719,6 +759,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/alias': {
+        trackCommand(cmd, args);
         const aParts = args.split(/\s+/);
         const aSub = aParts[0] ?? '';
 
@@ -758,6 +799,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/plugins': {
+        trackCommand(cmd, args);
         const plugins = pluginsRef.current;
         if (!plugins.length) {
           sysMsg(`No plugins loaded.\n\nPlace .js plugin files in ~/.localcode/plugins/\nEach file should export default: { name, trigger, description, execute }`);
@@ -769,6 +811,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/provider': {
+        trackCommand(cmd, args);
         if (!args) {
           const list = Object.values(PROVIDERS)
             .map((p) => {
@@ -793,6 +836,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/apikey': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg('Usage: /apikey <key>');
           return;
@@ -807,6 +851,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/model': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg(`Current model: ${session.model}\nUsage: /model <model-name>`);
           return;
@@ -817,6 +862,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/checkpoint': {
+        trackCommand(cmd, args);
         const label = args || `checkpoint-${Date.now()}`;
         setSession((s) => {
           const { state, checkpoint } = createCheckpoint(s, label);
@@ -828,6 +874,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/restore': {
+        trackCommand(cmd, args);
         const cps = session.checkpoints;
         if (!cps.length) {
           sysMsg('No checkpoints saved. Use /checkpoint <label> to create one.');
@@ -852,6 +899,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/history': {
+        trackCommand(cmd, args);
         const sessions = listSessions();
         if (!sessions.length) {
           sysMsg('No session history found.');
@@ -884,6 +932,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/review': {
+        trackCommand(cmd, args);
         setMood('thinking');
         sysMsg('Running code review…');
         try {
@@ -921,6 +970,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/commit': {
+        trackCommand(cmd, args);
         setMood('thinking');
         sysMsg('Generating commit message…');
         try {
@@ -960,6 +1010,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/git': {
+        trackCommand(cmd, args);
         const gParts = args.split(/\s+/);
         const gSub = gParts[0]?.toLowerCase() ?? '';
 
@@ -1003,6 +1054,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/diff': {
+        trackCommand(cmd, args);
         const files = executorRef.current.getSessionFiles();
         const paths = Object.keys(files);
         if (!paths.length) {
@@ -1031,6 +1083,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/context': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg('Usage: /context <file-or-folder>');
           return;
@@ -1055,6 +1108,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/allowall': {
+        trackCommand(cmd, args);
         // Cycle through modes: suggest → auto-edit → full-auto → suggest
         setSession((s) => {
           const current = s.approvalMode;
@@ -1068,6 +1122,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/mode': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg(
             `Current mode: ${session.approvalMode}\n\n` +
@@ -1088,6 +1143,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/steps': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg(`Max agent steps: ${session.maxSteps}\nUsage: /steps <number>  (default: 20)`);
           return;
@@ -1103,31 +1159,48 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/compact': {
+        trackCommand(cmd, args);
         if (!session.messages.length) {
           sysMsg('No conversation to compact.');
           return;
         }
+        const threshold = parseInt(args, 10) || 20;
+        if (!needsCompacting(session.messages, threshold)) {
+          sysMsg(`Conversation has ${session.messages.length} messages (threshold: ${threshold}). Not yet needed.`);
+          return;
+        }
         sysMsg('Compacting conversation…');
         setMood('thinking');
-        const prompt = `Summarize the following conversation in 3-5 concise sentences, preserving key decisions, code context, and goals:\n\n${session.messages.map((m) => `${m.role}: ${m.content.slice(0, 500)}`).join('\n\n')}`;
-        let summary = '';
-        await streamProvider(
-          session.provider,
-          session.apiKeys,
-          session.model,
-          [{ role: 'user', content: prompt }],
-          (chunk) => { if (chunk.text) summary += chunk.text; },
-        );
-        const summaryMsg: Message = { role: 'system', content: `[Compacted conversation summary]\n${summary}` };
-        setSession((s) => ({ ...s, messages: [summaryMsg] }));
-        setDisplayMessages([]);
-        executorRef.current.clearSessionFiles();
-        sysMsg(`Conversation compacted. Summary:\n${summary}`);
+        try {
+          const compactConfig = {
+            provider: session.provider,
+            apiKeys: session.apiKeys,
+            model: session.model,
+            systemPrompt: session.systemPrompt,
+            threshold,
+            keepRecent: 6,
+          };
+          const result = await compactConversation(session.messages, compactConfig);
+          if (!result.summary) {
+            sysMsg('Compacting returned no summary. Keeping messages as-is.', true);
+            setMood('idle');
+            return;
+          }
+          const newMessages = buildCompactedMessages(session.messages, result.summary, compactConfig);
+          setSession((s) => ({ ...s, messages: newMessages }));
+          setDisplayMessages([]);
+          executorRef.current.clearSessionFiles();
+          sysMsg(`Conversation compacted: ${result.compactedMessages} messages → summary + ${result.remainingMessages} recent messages (~${result.tokensSaved} tokens saved)`);
+        } catch (err) {
+          trackError(err instanceof Error ? err : new Error(String(err)), { context: 'compact' });
+          sysMsg(`Compacting failed: ${err instanceof Error ? err.message : String(err)}`, true);
+        }
         setMood('idle');
         return;
       }
 
       case '/status': {
+        trackCommand(cmd, args);
         const tokens = estimateTokens(session.messages);
         const cps = session.checkpoints.length;
         const provider = PROVIDERS[session.provider];
@@ -1147,6 +1220,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/sys': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg(`System prompt:\n\n${session.systemPrompt}\n\nPersona: ${session.activePersona ?? 'custom'}\nUsage: /sys <new prompt>`);
           return;
@@ -1157,6 +1231,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/persona': {
+        trackCommand(cmd, args);
         const personas = session.personas;
         if (!args) {
           const list = personas
@@ -1177,6 +1252,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/pin': {
+        trackCommand(cmd, args);
         if (!args) {
           if (!session.pinnedContext.length) {
             sysMsg('No pinned context. Usage: /pin <text to always include>');
@@ -1192,6 +1268,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/unpin': {
+        trackCommand(cmd, args);
         if (!session.pinnedContext.length) {
           sysMsg('No pinned context to remove.');
           return;
@@ -1215,6 +1292,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/retry': {
+        trackCommand(cmd, args);
         const msgs = session.messages;
         if (!msgs.length) {
           sysMsg('Nothing to retry.');
@@ -1235,6 +1313,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/copy': {
+        trackCommand(cmd, args);
         if (!session.lastAssistantMessage) {
           sysMsg('No response to copy yet.');
           return;
@@ -1266,6 +1345,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/export': {
+        trackCommand(cmd, args);
         const filename = (args || `localcode-${Date.now()}`).replace(/\.md$/, '') + '.md';
         const outPath = path.join(session.workingDir, filename);
         const lines = [
@@ -1289,6 +1369,7 @@ export function App({ initialState }: AppProps): React.ReactElement {
       }
 
       case '/share': {
+        trackCommand(cmd, args);
         const timestamp = Date.now();
         const outPath = path.join(session.workingDir, `localcode-share-${timestamp}.html`);
 
@@ -1357,6 +1438,7 @@ ${msgHtml}
       }
 
       case '/undo': {
+        trackCommand(cmd, args);
         const files = executorRef.current.getSessionFiles();
         const paths = Object.keys(files);
         if (!paths.length) {
@@ -1373,6 +1455,7 @@ ${msgHtml}
       }
 
       case '/todo': {
+        trackCommand(cmd, args);
         if (!session.messages.length) {
           sysMsg('No conversation to extract todos from.');
           return;
@@ -1388,6 +1471,7 @@ ${msgHtml}
       }
 
       case '/web': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /web <search query>'); return; }
         sysMsg(`Searching: "${args}"…`);
         setMood('thinking');
@@ -1458,6 +1542,7 @@ ${msgHtml}
       }
 
       case '/open': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /open <file>'); return; }
         const editor = process.env.EDITOR || (process.platform === 'darwin' ? 'open' : 'xdg-open');
         execFile(editor, [args], { cwd: session.workingDir }, (err) => {
@@ -1468,6 +1553,7 @@ ${msgHtml}
       }
 
       case '/models': {
+        trackCommand(cmd, args);
         sysMsg(`Fetching models for ${PROVIDERS[session.provider].displayName}…`);
         setMood('thinking');
         const models = await listModels(session.provider, session.apiKeys);
@@ -1481,6 +1567,7 @@ ${msgHtml}
       }
 
       case '/cost': {
+        trackCommand(cmd, args);
         const tokens = estimateTokens(session.messages);
         const cost = session.sessionCost;
         const provider = PROVIDERS[session.provider];
@@ -1493,6 +1580,7 @@ ${msgHtml}
       }
 
       case '/explain': {
+        trackCommand(cmd, args);
         setMood('thinking');
         let prompt: string;
         if (args) {
@@ -1524,6 +1612,7 @@ ${msgHtml}
       }
 
       case '/test': {
+        trackCommand(cmd, args);
         setMood('thinking');
         sysMsg('Detecting test runner…');
 
@@ -1612,6 +1701,7 @@ ${msgHtml}
       }
 
       case '/watch': {
+        trackCommand(cmd, args);
         const wSub = args.trim();
 
         if (!wSub) {
@@ -1667,6 +1757,7 @@ ${msgHtml}
       }
 
       case '/image': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /image <file-path>'); return; }
         const imgPath = path.isAbsolute(args) ? args : path.join(session.workingDir, args);
         if (!fs.existsSync(imgPath)) {
@@ -1696,6 +1787,7 @@ ${msgHtml}
       }
 
       case '/index': {
+        trackCommand(cmd, args);
         sysMsg(`Building TF-IDF index for ${session.workingDir}…`);
         setMood('thinking');
         try {
@@ -1710,6 +1802,7 @@ ${msgHtml}
       }
 
       case '/search': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /search <pattern>  — search file contents in working dir'); return; }
 
         // Use TF-IDF if indexed
@@ -1737,6 +1830,7 @@ ${msgHtml}
       }
 
       case '/init': {
+        trackCommand(cmd, args);
         sysMsg('Analyzing project…');
         setMood('thinking');
         try {
@@ -1780,6 +1874,7 @@ ${msgHtml}
       }
 
       case '/doctor': {
+        trackCommand(cmd, args);
         setMood('thinking');
         const checks: Array<{ label: string; status: string; ok: boolean }> = [];
 
@@ -1837,6 +1932,7 @@ ${msgHtml}
       }
 
       case '/memory': {
+        trackCommand(cmd, args);
         const subCmd = args.trim().toLowerCase();
 
         if (subCmd === 'edit') {
@@ -1871,6 +1967,7 @@ ${msgHtml}
       }
 
       case '/hooks': {
+        trackCommand(cmd, args);
         const hooksPath = path.join(os.homedir(), '.localcode', 'hooks.json');
         const loaded = hooksRef.current;
         const total = [...(loaded.PreToolUse ?? []), ...(loaded.PostToolUse ?? []), ...(loaded.Notification ?? [])].length;
@@ -1898,6 +1995,7 @@ ${msgHtml}
       }
 
       case '/mcp': {
+        trackCommand(cmd, args);
         const subParts = args.split(/\s+/);
         const sub = subParts[0]?.toLowerCase();
         const mcpArgs = subParts.slice(1).join(' ');
@@ -1981,6 +2079,7 @@ ${msgHtml}
       }
 
       case '/cd': {
+        trackCommand(cmd, args);
         if (!args) {
           sysMsg(`Current working directory: ${session.workingDir}\nUsage: /cd <path>`);
           return;
@@ -1998,6 +2097,7 @@ ${msgHtml}
       }
 
       case '/ping': {
+        trackCommand(cmd, args);
         const pingAll = args === 'all';
         const providersToPing: Provider[] = pingAll
           ? (Object.keys(PROVIDERS) as Provider[]).filter(p => !PROVIDERS[p].requiresKey || session.apiKeys[p])
@@ -2038,6 +2138,7 @@ ${msgHtml}
       }
 
       case '/ls': {
+        trackCommand(cmd, args);
         const target = args || '.';
         const result = await executorRef.current.execute({ name: 'list_dir', args: { path: target, recursive: false } });
         sysMsg(result.success ? result.output : `Could not list: ${target}`);
@@ -2045,6 +2146,7 @@ ${msgHtml}
       }
 
       case '/find': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /find <filename-pattern>  e.g. /find *.ts'); return; }
         const result = await executorRef.current.execute({ name: 'find_files', args: { pattern: args } });
         sysMsg(result.success && result.output.trim() ? result.output : `No files matching: ${args}`);
@@ -2052,6 +2154,7 @@ ${msgHtml}
       }
 
       case '/update': {
+        trackCommand(cmd, args);
         sysMsg('Checking for updates…');
         setMood('thinking');
         try {
@@ -2089,6 +2192,7 @@ ${msgHtml}
       }
 
       case '/onboarding': {
+        trackCommand(cmd, args);
         const steps = [
           '1. Choose a provider: /provider ollama (free, local) or /provider openai/claude/groq',
           '2. Set API keys if needed: /apikey <key> (or set env vars OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY)',
@@ -2108,8 +2212,51 @@ ${msgHtml}
       }
 
       case '/exit': {
+        trackCommand(cmd, args);
         try { saveSession(session); } catch { /* exit regardless */ }
         exit();
+        return;
+      }
+
+      case '/telemetry': {
+        trackCommand(cmd, args);
+        const tSub = args.toLowerCase();
+        if (tSub === 'on') {
+          setTelemetryEnabled(true);
+          sysMsg('Telemetry enabled. Anonymous usage data will be collected.');
+          return;
+        }
+        if (tSub === 'off') {
+          setTelemetryEnabled(false);
+          sysMsg('Telemetry disabled. No data will be collected.');
+          return;
+        }
+        const cfg = getTelemetryConfig();
+        sysMsg(
+          `Telemetry Configuration\n` +
+          `  Enabled:     ${cfg.enabled ? 'yes' : 'no'}\n` +
+          `  AnonymousID: ${cfg.anonymousId}\n` +
+          `  Version:     ${cfg.version}\n` +
+          `  Platform:    ${cfg.platform}\n` +
+          `  Node:        ${cfg.nodeVersion}\n\n` +
+          `Usage: /telemetry on|off`,
+        );
+        return;
+      }
+
+      case '/rate-limit': {
+        trackCommand(cmd, args);
+        const rl = rateLimiterRef.current;
+        const stats = rl.getUsageStats();
+        const costCheck = rl.checkCostLimit(session.sessionCost);
+        sysMsg(
+          `Rate Limit Status\n` +
+          `  Requests/min:    ${stats.requestsThisMinute} / ${rl.constructor.name === 'RateLimiter' ? '60' : '60'}\n` +
+          `  Tokens/hour:     ${stats.tokensThisHour.toLocaleString()} / 100,000\n` +
+          `  Tokens remaining: ${stats.hourRemaining.toLocaleString()}\n` +
+          `  Session cost:    $${session.sessionCost.toFixed(4)} ${costCheck.allowed ? '✓' : `⚠ ${costCheck.reason}`}\n\n` +
+          `Limits: 60 req/min, 100k tokens/hr, $10/session`,
+        );
         return;
       }
 
@@ -2118,6 +2265,7 @@ ${msgHtml}
       // ──────────────────────────────────────────────────────────────────────
 
       case '/budget': {
+        trackCommand(cmd, args);
         if (!args || args === '') {
           const limit = session.budgetLimit !== null ? `$${session.budgetLimit.toFixed(2)}` : 'none';
           const fallback = session.budgetFallbackModel ?? PROVIDERS.ollama.defaultModel;
@@ -2139,6 +2287,7 @@ ${msgHtml}
       }
 
       case '/routing': {
+        trackCommand(cmd, args);
         if (!args || args === '') {
           const r = session.modelRouting;
           if (!r) { sysMsg('No routing configured. Usage: /routing planning=<model> execution=<model> review=<model>  |  /routing clear'); return; }
@@ -2163,6 +2312,7 @@ ${msgHtml}
       }
 
       case '/safe': {
+        trackCommand(cmd, args);
         const safeArg = args.toLowerCase();
         const newSafe = safeArg === 'on' ? true : safeArg === 'off' ? false : !session.safeMode;
         setSession((s) => ({ ...s, safeMode: newSafe }));
@@ -2173,6 +2323,7 @@ ${msgHtml}
       }
 
       case '/dna': {
+        trackCommand(cmd, args);
         sysMsg('⌬  Analyzing git history to extract your coding DNA…');
         setMood('thinking');
         try {
@@ -2193,6 +2344,7 @@ ${msgHtml}
       }
 
       case '/chaos': {
+        trackCommand(cmd, args);
         sysMsg('⚡  Chaos mode activated. Nyx will hunt for improvements unsolicited…');
         const chaosPersona = session.personas.find((p) => p.name === 'chaos-refactor');
         const chaosPrompt = chaosPersona?.prompt ?? '';
@@ -2201,6 +2353,7 @@ ${msgHtml}
       }
 
       case '/evolve': {
+        trackCommand(cmd, args);
         if (session.messages.length < 4) { sysMsg('Need at least a few messages to evolve from.', true); return; }
         sysMsg('↑  Analyzing session to extract learnings for .nyx.md…');
         setMood('thinking');
@@ -2220,6 +2373,7 @@ ${msgHtml}
       }
 
       case '/swarm': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /swarm "task description" [N]  (N defaults to 3)', true); return; }
         const swarmMatch = args.match(/^"([^"]+)"\s*(\d+)?$/) ?? args.match(/^(.+?)\s+(\d+)?$/);
         const swarmTask = swarmMatch?.[1]?.trim() ?? args;
@@ -2246,6 +2400,7 @@ ${msgHtml}
       }
 
       case '/test-loop': {
+        trackCommand(cmd, args);
         const maxIter = parseInt(args || '5', 10);
         const testCmd = await detectTestCommand(session.workingDir);
         if (!testCmd) { sysMsg('Could not detect test runner. Supported: npm test, vitest, jest, pytest, cargo test, go test.', true); return; }
@@ -2274,6 +2429,7 @@ ${msgHtml}
       }
 
       case '/autopilot': {
+        trackCommand(cmd, args);
         const apArg = args.toLowerCase();
         if (apArg === 'off' || (apArg === '' && session.autopilotActive)) {
           autopilotWatcherRef.current?.close();
@@ -2311,6 +2467,7 @@ ${msgHtml}
       }
 
       case '/benchmark': {
+        trackCommand(cmd, args);
         if (!args) { sysMsg('Usage: /benchmark "prompt to test across all providers"', true); return; }
         const benchPrompt = args.replace(/^"|"$/g, '');
         const targets = buildTargets(session.apiKeys);
@@ -2339,6 +2496,7 @@ ${msgHtml}
       }
 
       case '/privacy': {
+        trackCommand(cmd, args);
         const log = session.providerCallLog;
         if (log.length === 0) { sysMsg('No provider calls recorded this session.'); return; }
         const byProvider = new Map<string, { calls: number; tokens: number; cost: number }>();
@@ -2369,6 +2527,7 @@ ${msgHtml}
       }
 
       case '/share-state': {
+        trackCommand(cmd, args);
         const stateExport = {
           version: pkg.version,
           exportedAt: new Date().toISOString(),
@@ -2392,6 +2551,7 @@ ${msgHtml}
       }
 
       case '/agent': {
+        trackCommand(cmd, args);
         if (!args) {
           setShowAgentPicker(true);
           setAgentPickerQuery('');
@@ -2414,6 +2574,7 @@ ${msgHtml}
       }
 
       case '/agents': {
+        trackCommand(cmd, args);
         const registry = getAgentRegistry();
         if (args) {
           const filtered = registry.searchAgents(args);
@@ -2441,6 +2602,7 @@ ${msgHtml}
       }
 
       case '/orchestrate': {
+        trackCommand(cmd, args);
         const parts = args.split(/\s+/);
         const task = parts.slice(0, -1).join(' ') || args;
         const mode = (parts[parts.length - 1]?.toLowerCase() || 'sprint') as 'full' | 'sprint' | 'micro';
@@ -2488,6 +2650,7 @@ ${msgHtml}
       }
 
       case '/nexus': {
+        trackCommand(cmd, args);
         const parts = args.split(/\s+/);
         const task = parts.slice(0, -1).join(' ') || args;
         const mode = (parts[parts.length - 1]?.toLowerCase() || 'full') as 'full' | 'sprint' | 'micro';

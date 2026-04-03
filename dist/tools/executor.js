@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { logger } from '../core/logger.js';
+import { checkCommandSafety } from '../security/index.js';
 function buildDiff(filePath, before, after) {
     const beforeLines = before.split('\n');
     const afterLines = after.split('\n');
@@ -132,30 +133,13 @@ export class ToolExecutor {
     }
     runShell(args) {
         const cwd = args.cwd ? this.resolvePath(args.cwd) : this.workingDir;
-        // Enforce blocked commands
-        const blockedPatterns = [
-            'rm -rf /',
-            'rm -rf /*',
-            'mkfs',
-            'dd if=',
-            'shutdown',
-            'reboot',
-            'curl * | sh',
-            'curl *|sh',
-            'wget * | sh',
-            'wget *|sh',
-            ':(){:|:&};:',
-            'chmod -R 777 /',
-            'chmod -R 777 /*',
-            '> /dev/sda',
-            '> /dev/disk',
-        ];
-        const cmdLower = args.command.toLowerCase().replace(/\s+/g, ' ').trim();
-        for (const pattern of blockedPatterns) {
-            const normalizedPattern = pattern.toLowerCase().replace(/\s+/g, ' ');
-            if (cmdLower.includes(normalizedPattern) || cmdLower.includes(normalizedPattern.replace(' ', ''))) {
-                return Promise.resolve({ success: false, output: `Blocked: command contains dangerous pattern "${pattern}"` });
-            }
+        // Run comprehensive security check
+        const securityResult = checkCommandSafety(args.command);
+        const isSafe = securityResult.every(c => c.passed);
+        if (!isSafe) {
+            const criticalIssues = securityResult.filter(c => !c.passed).map(c => c.message).join('; ');
+            logger.warn('Blocked dangerous command', { command: args.command.slice(0, 200), issues: criticalIssues });
+            return Promise.resolve({ success: false, output: `Security check failed: ${criticalIssues}` });
         }
         return new Promise((resolve) => {
             execFile('sh', ['-c', args.command], { cwd, timeout: 30000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {

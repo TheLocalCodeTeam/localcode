@@ -6,6 +6,8 @@
       "use": "@vercel/static"
     }
   ],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "routes": [
     {
       "src": "/css/(.*)",
@@ -20,28 +22,8 @@
       "dest": "/assets/$1"
     },
     {
-      "src": "/features.html",
-      "dest": "/features.html"
-    },
-    {
-      "src": "/platforms.html",
-      "dest": "/platforms.html"
-    },
-    {
-      "src": "/agents.html",
-      "dest": "/agents.html"
-    },
-    {
-      "src": "/install.html",
-      "dest": "/install.html"
-    },
-    {
-      "src": "/docs.html",
-      "dest": "/docs.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "src": "/docs/(.*)",
+      "dest": "/docs/$1"
     }
   ],
   "headers": [
@@ -63,14 +45,6 @@
       "source": "/assets/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    },
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" }
       ]
     }
   ]
